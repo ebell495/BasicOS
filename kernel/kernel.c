@@ -9,7 +9,6 @@ void main()
 	unsigned char scanCode = 0;
 	unsigned char shift = 0;
 	
-	
 	clearscreen();
 	
 	while(1)

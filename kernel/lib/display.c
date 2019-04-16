@@ -1,9 +1,7 @@
 #include "display.h"
 #include "hwio.h"
 
-//The actual video memory location is located at 0xB8000
-//but either this code is messed up or QEMU moved it
-#define VMEM_LOCATION 0xB8004
+#define VMEM_LOCATION 0xB8000
 
 #define REG_SCREEN_CTR 0x3D4
 #define REG_SCREEN_DATA 0x3D5
@@ -38,8 +36,8 @@ void printc(unsigned char c)
 	}
 	
 	unsigned char* vMemLoc = (unsigned char*)(VMEM_LOCATION);
-	vMemLoc[offset-1] = c;
-	vMemLoc[offset] = 0x0F;
+	vMemLoc[offset] = c;
+	vMemLoc[offset+1] = 0x0F;
 
 	setcursor_o(offset + 2);
 }
@@ -146,6 +144,6 @@ void clearcursor()
 {
 	int offset = getcursor();
 	unsigned char* vMemLoc = (unsigned char*)(VMEM_LOCATION);
-	vMemLoc[offset-1] = 0;
 	vMemLoc[offset] = 0;
+	vMemLoc[offset+1] = 0;
 }
