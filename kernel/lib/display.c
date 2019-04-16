@@ -1,10 +1,33 @@
 #include "display.h"
 #include "hwio.h"
+#include "memlib.h"
 
 #define VMEM_LOCATION 0xB8000
 
 #define REG_SCREEN_CTR 0x3D4
 #define REG_SCREEN_DATA 0x3D5
+
+char lineEnding[25];
+
+void scroll()
+{
+	for(int line = 1; line < 25; line++)
+	{
+		memcpy((char*)VMEM_LOCATION + ((line-1)*160), (char*)VMEM_LOCATION + ((line)*160), 160);
+		lineEnding[line-1] = lineEnding[line];
+	}
+	
+	unsigned char* vMemLoc = (unsigned char*)(VMEM_LOCATION) + (24 * 160);
+	
+	for(int endRow = 0; endRow < 80; endRow++)
+	{
+		vMemLoc[endRow*2] = 0x0;
+		vMemLoc[endRow*2 + 1] = 0x0;
+	}
+	
+	lineEnding[24] = 0;
+	setcursor_rc(24, 0);
+}
 
 //Calulates the memory offset from the row and column information
 int vOffset(int row, int col)
@@ -20,18 +43,20 @@ void printc(unsigned char c)
 		return;
 	
 	int offset = getcursor();
+	int rows = offset / (2*80);
 	
 	if(c=='\n')
 	{
-		int rows = offset / (2*80);
 		offset = vOffset(rows+1, 0);
 		setcursor_o(offset);
+		if(rows+1 > 24)
+			scroll();
+		lineEnding[rows]++;
 		return;
 	}
 	
 	if((offset % 80) == 79)
 	{
-		int rows = offset / (2*80);
 		offset = vOffset(rows+1, 0);
 	}
 	
@@ -40,6 +65,48 @@ void printc(unsigned char c)
 	vMemLoc[offset+1] = 0x0F;
 
 	setcursor_o(offset + 2);
+	lineEnding[rows]++;
+}
+
+//Prints a null-terminated string
+void printString(char* string)
+{
+	while(*string != '\0')
+	{
+		printc(*string);
+		string++;
+	}
+}
+
+//Handles the backspace
+//Move the cursor back and clears it
+//If it was at the end of the line, then it moves the cursor to the end of the last line and clears it
+void backspace()
+{
+	int offset = getcursor();
+	int row = offset / (2*80);
+	int col = (offset/2)%80;
+	
+	if(offset == 0)
+		return;
+	
+	if(lineEnding[row] == 0)
+	{
+		row--;
+		col = lineEnding[row];
+		
+	}
+	
+	if(col == 0)
+	{
+		setcursor_rc(row, col);
+		clearcursor();
+		return;
+	}
+	
+	setcursor_rc(row, col-1);
+	clearcursor();
+	lineEnding[row]--;
 }
 
 //Sets the cursor to the row and column given
@@ -145,5 +212,5 @@ void clearcursor()
 	int offset = getcursor();
 	unsigned char* vMemLoc = (unsigned char*)(VMEM_LOCATION);
 	vMemLoc[offset] = 0;
-	vMemLoc[offset+1] = 0;
+	vMemLoc[offset+1] = 0x0F;
 }
