@@ -1,6 +1,5 @@
 #include "ps2k.h"
 #include "hwio.h"
-#include "display.h"
 
 const unsigned char key_code_char_ns[256] = 
 {
@@ -20,18 +19,18 @@ const unsigned char key_code_char_shift[256] =
 
 //Gets the character represention of the current key being pressed
 //Returns zero if there is no key being pressed
-unsigned char getKeyPress()
+unsigned char ps2_getkeypress()
 {
-	unsigned char scanCode = getScanCode();
+	unsigned char scanCode = ps2_getscancode();
 	if(scanCode == 0)
 		return 0;
 	else if(scanCode > 0x80)
 		return 0;
-	return getChar(scanCode, 0);
+	return ps2_getchar(scanCode, 0);
 }
 
 //Gets the ps2 code of the key being pressed or released
-unsigned char getScanCode()
+unsigned char ps2_getscancode()
 {
 	//Checks if the ps2 buffer has data
 	if((pbytein(0x64) & 0x01) == 1)
@@ -44,19 +43,19 @@ unsigned char getScanCode()
 }
 
 //Will wait for a key to be pressed before returning the character representation of the key pressed
-unsigned char waitForKeyPress()
+unsigned char ps2_waitforkeypress()
 {
-	unsigned char keyChar = getKeyPress();
+	unsigned char keyChar = ps2_getkeypress();
 	while(keyChar == 0)
 	{
-		keyChar = getKeyPress();
+		keyChar = ps2_getkeypress();
 	}
 	return keyChar;
 }
 
 //Converts the scanCode to a character for output
 //if shift is 0, it will get the lowercase character
-unsigned char getChar(unsigned char scanCode, unsigned char shift)
+unsigned char ps2_getchar(unsigned char scanCode, unsigned char shift)
 {
 	//Note: find a better way to store this information rather than pushing it to the stack
 	
