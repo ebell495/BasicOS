@@ -6,25 +6,42 @@
 //Entry point of the kernel
 void main()
 {
+	//Start functions
 	disp_clearscreen();
+	mem_read_e820();
 	
 	//Variables to 
 	unsigned char scanCode = 0;
 	unsigned char shift = 0;
 	
 	char* test = "Hello, World!";
-	//Make a pointer in some randomx part of memory
-	char* r = (char*) 0x3000;
+	//Allocate some memory in the heap
+	char* r = (char*) kmalloc(20);
 	
 	disp_printstring(test);
 	disp_printc('\n');
 	
-	//Copy from the string to the pointer set up at 0x3000
+	//Copy from the string to the pointer set up in the heap
 	memcpy(r, test, 20);
 	
 	disp_printstring(r);
 	
 	p_initserial();
+	
+	disp_printc('\n');
+	
+	char* alp = kmalloc(28);
+	
+	for(int i = 0; i < 26; i++)
+	{
+		alp[i] = 'A' + i;
+	}
+	
+	alp[26] = '\n';
+	alp[27] = 0;
+	
+	disp_printstring(alp);
+	
 
 	//Simple write to display loop
 	while(1)

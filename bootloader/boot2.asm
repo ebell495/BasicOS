@@ -148,7 +148,8 @@ psPMDone:
 	
 init_pm:
 	
-	mov ebp, 0x1EE0000 ;Location of the stack for the kernel to use
+	mov ebp, 0x9FBFF 	;Location of the stack for the kernel to use
+						;We know this is a good memory location
 	mov esp, ebp
 	
 	call BEGIN_PM

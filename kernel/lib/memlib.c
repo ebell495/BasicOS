@@ -1,4 +1,13 @@
 #include "memlib.h"
+#include "display.h"
+#define E820_LOC 0x4000
+#define E820_COUNT_LOC 0x7000
+
+unsigned int lowMemSize = 0x0;
+unsigned int highMemLocation = 0x0;
+unsigned int highMemSize = 0x0;
+
+unsigned int cHeapSize = 0;
 
 void* memcpy(void* restrict dstptr, const void* restrict srcptr, int size) 
 {
@@ -11,4 +20,53 @@ void* memcpy(void* restrict dstptr, const void* restrict srcptr, int size)
 		src++;
 	}
 	return dstptr;
+}
+
+//Kernel memory allocation
+
+void* kmalloc(unsigned int size)
+{
+	void* retLoc = (void*)(highMemLocation + cHeapSize);
+	cHeapSize+= size;
+	return retLoc;
+}
+
+//Reads the e820 map that was loaded during the boot sequence
+//It then take the important information out of it and stores the sizes above
+
+void mem_read_e820()
+{
+	int count = *((int*)(E820_COUNT_LOC));
+	
+	for(int i = 0; i < count; i++)
+	{
+		unsigned int baseAddress = 0x0;
+		for(int j = 0; j < 4; j++)
+		{
+			baseAddress += (((unsigned char) *((int*)(E820_LOC + (24*i) + j))) << (j*8));
+		}
+		
+		unsigned int size = 0x0;
+		for(int j = 0; j < 4; j++)
+		{
+			size += ((unsigned char) *((int*)(E820_LOC + (24*i) + (8) + j))) << (j*8);
+		}
+		
+		unsigned char type = (unsigned char) *((int*)(E820_LOC + (24*i) + (16)));
+		
+		if(type == 1)
+		{
+			//See if we have found the upper memory location
+			if(baseAddress > 0x9FC00)
+			{
+				highMemLocation = baseAddress;
+				highMemSize = size;
+				return;
+			}
+			else
+			{
+				lowMemSize = size;
+			}
+		}
+	}
 }
