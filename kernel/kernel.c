@@ -42,6 +42,7 @@ void main()
 	
 	disp_printstring(alp);
 	
+	kfree(alp);
 
 	//Simple write to display loop
 	while(1)

@@ -3,6 +3,7 @@
 
 void* memcpy(void* restrict dstptr, const void* restrict srcptr, int size);
 void* kmalloc(unsigned int size);
+void kfree(void* pointer);
 void mem_read_e820();
 
 #endif
