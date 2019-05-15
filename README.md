@@ -37,11 +37,21 @@ qemu-system-x86_64 -drive format=raw,file="image/os-image.img" -m 32M
 VirtualBox doesn't support booting off a raw disk image, so to get around this we convert the image into a vmdk
 
 To convert the raw images, execute the following commands
-```shell
-VBoxManage convertfromraw os-image.img testimage.vmdk --format vmdk
 
-#This sets the uuid of the new vmdk, change the uuid to a new one every time this command is run
-VBoxManage internalcommands sethduuid testimage.vmdk 0a467099-8628-48d9-8315-1647b9251001
+-Linux/Mac
+```shell
+VBoxManage convertfromraw "image/os-image.img" "image/testimage.vmdk" --format vmdk
+
+#This sets the uuid of the new vmdk
+VBoxManage internalcommands sethduuid "image/testimage.vmdk" $(uuidgen)
 ```
 
-Now you can create a new VM and use the newly created vmdk as the disk to use
+-Windows Powershell
+```shell
+VBoxManage convertfromraw "image/os-image.img" "image/testimage.vmdk" --format vmdk
+
+#This sets the uuid of the new vmdk
+VBoxManage internalcommands sethduuid "image/testimage.vmdk" $([guid]::NewGuid())
+```
+
+Now you can create a new VM and use the newly created vmdk as the disk to use. This is experimental and VirtualBox may not run the image.
