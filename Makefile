@@ -1,4 +1,5 @@
 build:
+	make clean
 	nasm -f bin "bootloader/boot1.asm" -o "bin/bootloader/boot1.bin"
 	nasm -f bin "bootloader/boot2.asm" -o "bin/bootloader/boot2.bin"
 	nasm "kernel/asm/kernelEntry.asm" -f elf32 -o "bin/kernel/kernelEntry.o"
@@ -14,10 +15,12 @@ build:
 	dd if=/dev/zero of=image/os-image.img bs=1 count=1 seek=19922943
 
 clean:
-	rm -r bin
+	rm -r -f bin
+	rm -r -f image
 	mkdir bin
 	mkdir bin/bootloader
 	mkdir bin/kernel
+	mkdir image
 	
 
 	
