@@ -126,6 +126,14 @@ void mem_read_e820()
 				bucketStartLocation = baseAddress + size - 16 - (16 - ((baseAddress + size) % 16));
 				nextBucketLocation = bucketStartLocation;
 				nextPageLocation = bucketStartLocation - (sizeof(struct kbucket) * ((size / 4096)));
+				//disp_phex32(bucketStartLocation);
+				//disp_printc('\n');
+				//disp_phex32(nextPageLocation);
+				//disp_printc('\n');
+				//disp_phex32(baseAddress);
+				//disp_printc('\n');
+				//disp_phex32(size);
+				//disp_printc('\n');
 				
 				return;
 			}
@@ -210,7 +218,7 @@ void remove_free_page(struct kpage* page)
 	}
 }
 
-//This is the main kmalloc functions
+//This is the main kmalloc function
 //Finds or allocates the pages of memory that will be used
 struct kpage* get_next_contiguous_pages(int numPages)
 {

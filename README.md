@@ -5,8 +5,10 @@ A very simple operating system written in Assembly and C
 # Features/Functions
 - Multi-stage bootloader
 - e820 Memory Map reading
-- Basic I/O from ps2 port
+- Basic I/O from ps2 port and serial port
 - Simple 80x25 Text display interface
+- ATA Drive reading/writing
+- Basic kernel memory managment
 
 # Building
 Right now, this only builds on unix/linux based environments

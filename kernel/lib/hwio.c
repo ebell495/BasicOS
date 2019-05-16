@@ -5,14 +5,28 @@
 //Outputs a byte to the port
 void pbyteout(unsigned short port, unsigned char data)
 {
-	__asm__("out %%al, %%dx" : :"a" (data), "d" (port));
+	__asm__("outb %%al, %%dx" : :"a" (data), "d" (port));
 }
 
 //Reads in a byte from the port given
 unsigned char pbytein(unsigned short port)
 {
 	unsigned char result;
-	__asm__("in %%dx, %%al" : "=a" (result) : "d" (port));
+	__asm__("inb %%dx, %%al" : "=a" (result) : "d" (port));
+	return result;
+}
+
+//Outputs a word(16 bits) to the port
+void pwordout(unsigned short port, unsigned short data)
+{
+	__asm__("outw %%ax, %%dx" : :"a" (data), "d" (port));
+}
+
+//Reads in a word(16 bits) from the port given
+unsigned short pwordin(unsigned short port)
+{
+	unsigned short result;
+	__asm__("inw %%dx, %%ax" : "=a" (result) : "d" (port));
 	return result;
 }
 
@@ -35,7 +49,10 @@ int p_serial_received()
 char p_serial_read()
 {
 	//Wait for data
-	while(p_serial_received() == 0);
+	if(p_serial_received() == 0)
+	{
+		return 0;
+	}
 	
 	return pbytein(PORT);
 }

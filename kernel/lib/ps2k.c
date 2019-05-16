@@ -57,9 +57,6 @@ unsigned char ps2_waitforkeypress()
 //if shift is 0, it will get the lowercase character
 unsigned char ps2_getchar(unsigned char scanCode, unsigned char shift)
 {
-	//Note: find a better way to store this information rather than pushing it to the stack
-	
-	
 	if(shift == 0)
 		return key_code_char_ns[scanCode];
 	else

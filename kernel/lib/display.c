@@ -44,14 +44,24 @@ void disp_printc(unsigned char c)
 	
 	int offset = disp_getcursor();
 	int rows = offset / (2*80);
+	if(rows > 24)
+	{
+		disp_scroll();
+		offset = disp_getcursor();
+		rows = offset / (2*80);
+	}
 	
 	if(c=='\n')
 	{
 		offset = disp_vOffset(rows+1, 0);
 		disp_setcursor_o(offset);
-		if(rows+1 > 24)
-			disp_scroll();
 		lineEnding[rows]++;
+		if(rows+1 > 24)
+		{
+			disp_scroll();
+			offset = disp_getcursor();
+			rows = offset / (2*80);
+		}
 		return;
 	}
 	
