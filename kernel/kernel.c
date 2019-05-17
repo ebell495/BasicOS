@@ -3,12 +3,14 @@
 #include "lib/hwio.h"
 #include "lib/memlib.h"
 #include "lib/ata.h"
+#include "lib/interrupts.h"
 
 //Entry point of the kernel
 void main()
 {
 	//Start functions
 	disp_clearscreen();
+	idt_init();
 	mem_read_e820();
 	ata_initdrive();
 	
@@ -52,14 +54,6 @@ void main()
 	//The last 2 bytes should be 55AA
 	unsigned char* read = ata_readsector(0);
 	
-	for(int j = 0; j < 256; j++)
-	{
-		//Print out was was read into groups of 2 bytes
-		disp_phex8(read[j*2]);
-		disp_phex8(read[j*2 +1]);
-		disp_printc(' ');
-	}
-	
 	//Change the last bytes to FEAB
 	//Will break the image so it wouldn't be bootable anymore
 	read[510] = 0xFE;
@@ -88,6 +82,9 @@ void main()
 	
 	//Write it back to the 1st sector
 	ata_writesector(0, read);
+	
+	//Test interrupt
+	__asm__("int $39");
 
 	//Simple write to display loop
 	while(1)

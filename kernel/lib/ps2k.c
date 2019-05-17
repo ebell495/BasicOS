@@ -17,6 +17,8 @@ const unsigned char key_code_char_shift[256] =
   'Z','X','C','V','B','N','M','<','>','?',0,'*',0,' ',0
 };
 
+
+
 //Gets the character represention of the current key being pressed
 //Returns zero if there is no key being pressed
 unsigned char ps2_getkeypress()
