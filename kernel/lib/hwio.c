@@ -69,3 +69,21 @@ void p_serial_write(char byte)
 	pbyteout(PORT,byte);
 }
 
+void p_serial_writestring(char* string)
+{
+	while(*string != '\0')
+	{
+		p_serial_write(*string);
+		string++;
+	}
+}
+
+void p_serial_writebytes(char* bytes, unsigned int size)
+{
+	for(int i = 0; i < size; i++)
+	{
+		p_serial_write(bytes[i]);
+	}
+}
+
+

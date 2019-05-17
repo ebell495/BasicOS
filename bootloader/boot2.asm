@@ -16,7 +16,7 @@ jmp $
 
 loadKernel:
 	mov bx, KERNEL_OFFSET	;Store the kernel data in the memory location at this label
-	mov dh, 45				;Load in 30 Sectors or 22.5KB of kernel data
+	mov dh, 45				;Load in 45 Sectors or 22.5KB of kernel data
 	mov dl, [BOOT_DRIVE]	;Load from the boot drive that the bios provided earlier and was passed from the first stage
 	mov cl, 0x06 			;Kernel is in the 6th sector (1: 1st stage, 2-5: Second Stage)
 	call diskLoad

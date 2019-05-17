@@ -1,9 +1,4 @@
-#include "lib/display.h"
-#include "lib/ps2k.h"
-#include "lib/hwio.h"
-#include "lib/memlib.h"
-#include "lib/ata.h"
-#include "lib/interrupts.h"
+#include "lib/klib.h"
 
 //Entry point of the kernel
 void main()
@@ -11,6 +6,11 @@ void main()
 	//Start functions
 	disp_clearscreen();
 	idt_init();
+	timer_init_timer();
+	p_initserial();
+	
+	p_serial_writestring("TEST STRING");
+	
 	mem_read_e820();
 	ata_initdrive();
 	
@@ -31,7 +31,6 @@ void main()
 	
 	disp_printstring(r);
 	
-	p_initserial();
 	
 	disp_printc('\n');
 	
@@ -52,6 +51,7 @@ void main()
 	
 	//Read the first sector of the drive
 	//The last 2 bytes should be 55AA
+	
 	unsigned char* read = ata_readsector(0);
 	
 	//Change the last bytes to FEAB
@@ -83,8 +83,18 @@ void main()
 	//Write it back to the 1st sector
 	ata_writesector(0, read);
 	
+	
 	//Test interrupt
-	__asm__("int $39");
+	
+	int secCount = 0;
+	
+	while(secCount < 20)
+	{
+		timer_wait(TICKS_PER_SECOND);
+		disp_printstring(" Second: ");
+		secCount++;
+	}
+	
 
 	//Simple write to display loop
 	while(1)
