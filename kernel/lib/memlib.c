@@ -1,8 +1,8 @@
 #include "memlib.h"
 #include "memlib_ext.h"
 #include "display.h"
-#define E820_LOC 0x6000
-#define E820_COUNT_LOC 0x7000
+#define E820_LOC 0x10000
+#define E820_COUNT_LOC 0xFFFD
 #define K_PAGE_SIZE 64
 
 

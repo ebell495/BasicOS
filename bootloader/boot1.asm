@@ -3,7 +3,7 @@
 
 mov [BOOT_DRIVE], dl
 						
-mov bp, 0x8000			;This sets up the stack far away from the loaded bootloader
+mov bp, 0x0FFF			;This sets up the stack far away from the loaded bootloader
 mov sp, bp
 
 mov bx, 0x1000			;Location to store the data

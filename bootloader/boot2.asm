@@ -16,8 +16,8 @@ jmp $
 
 loadKernel:
 	mov bx, KERNEL_OFFSET	;Store the kernel data in the memory location at this label
-	mov dh, 32				;Load in 32 Sectors or 22.5KB of kernel data
-							;BIG NOTE: The kernel is almost out of space
+	mov dh, 116				;Load in 48 Sectors or 24KB of kernel data
+							;BIG NOTE: The max size of the big kernel.bin is 116 sectors or 58KB
 							;Will need to start breaking it apart and loading in once we actually enter the kernel
 	mov dl, [BOOT_DRIVE]	;Load from the boot drive that the bios provided earlier and was passed from the first stage
 	mov cl, 0x04 			;Kernel is in the 6th sector (1: 1st stage, 2-5: Second Stage)
@@ -48,7 +48,7 @@ switchToPM:
 do_e820:
 	pusha
 	xor di, di					;Zero out the offset pointer register
-	mov bx, 0x600				;Prepare 0x600 for the segment register
+	mov bx, 0x1000				;Prepare 0x1000 for the segment register
 	mov es, bx					;This means that the mem address is ex * 0x10 + di
 	
 	xor ebx, ebx				;ebx must be 0 to start
@@ -93,8 +93,8 @@ do_e820:
 	jne .e820lp
 	
 .e820f:
-	mov bx, 0x7000
-	mov [bx], bp				;store the entry count at 0x7000
+	mov bx, 0xFFFD
+	mov [bx], bp				;store the entry count at 0xFFFD
 	clc							;there is "jc" on end of list to this point, so the carry must be cleared
 	mov bx, MEM_READ_SUC
 	call printnl

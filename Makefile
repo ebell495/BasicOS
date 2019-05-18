@@ -16,7 +16,7 @@ build:
 	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/timer.c" -o "bin/kernel/timer.o"
 	ld -melf_i386 -o "bin/kernel/kernel.bin" -Ttext 0x1500 "bin/kernel/kernelEntry.o" "bin/kernel/kernel.o"  "bin/kernel/display.o" "bin/kernel/hwio.o" "bin/kernel/ps2k.o" "bin/kernel/memlib.o" "bin/kernel/ata.o" "bin/kernel/IRQHandler.o" "bin/kernel/interrupts.o" "bin/kernel/interrupt_handler.o" "bin/kernel/timer.o" --oformat binary
 	cat "bin/bootloader/bootloader.bin" "bin/kernel/kernel.bin"> "image/os-image.img"
-	dd if=/dev/zero of=image/os-image.img bs=1 count=1 seek=26111
+	dd if=/dev/zero of=image/os-image.img bs=1 count=1 seek=75775
 
 clean:
 	rm -r -f bin
