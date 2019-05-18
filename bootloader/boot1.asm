@@ -7,7 +7,7 @@ mov bp, 0x8000			;This sets up the stack far away from the loaded bootloader
 mov sp, bp
 
 mov bx, 0x1000			;Location to store the data
-mov dh, 4				;Number of sectors to read(4) or 
+mov dh, 2				;Number of sectors to read(4) or 
 mov dl, [BOOT_DRIVE]
 mov cl, 0x02
 call diskLoad
@@ -24,8 +24,6 @@ jmp $
 ;Load memorymap to the memeo
 %include "bootloader/library/rstdio.asm"
 ;Data
-DISK_ERR_STR_A:
-	db 'Disk Read ErrorA', 0
 BOOT_DRIVE: dw 0
 
 times 510-($-$$) db 0 	;Fill the rest of the file with 0's to make a boot sector

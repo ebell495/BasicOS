@@ -1,7 +1,7 @@
 #include "memlib.h"
 #include "memlib_ext.h"
 #include "display.h"
-#define E820_LOC 0x4000
+#define E820_LOC 0x6000
 #define E820_COUNT_LOC 0x7000
 #define K_PAGE_SIZE 64
 
@@ -37,6 +37,7 @@ void* memcpy(void* restrict dstptr, const void* restrict srcptr, int size)
 
 void* kmalloc(unsigned int size)
 {
+	/*
 	if(size <= 0)
 		return (void*)-1;
 	
@@ -47,10 +48,20 @@ void* kmalloc(unsigned int size)
 	usedBuckets = b;
 	
 	return hPage->location;
+	*/
+	
+	int numPages = (size / K_PAGE_SIZE) + 1;
+	void* ret = (void*)bucketStartLocation;
+	bucketStartLocation += numPages;
+	
+	return ret;
+	
 }
 
 void kfree(void* pointer)
 {
+	return;
+	/*
 	//Make sure its a valid pointer
 	if(((unsigned int)pointer) % K_PAGE_SIZE != 0)
 	{
@@ -90,6 +101,7 @@ void kfree(void* pointer)
 	
 	disp_printstring("No such pointer2\n");
 	return;
+	*/
 }
 
 //Reads the e820 map that was loaded during the boot sequence
@@ -115,6 +127,17 @@ void mem_read_e820()
 		
 		unsigned char type = (unsigned char) *((int*)(E820_LOC + (24*i) + (16)));
 		
+		/*
+		disp_printc('\n');
+		disp_phex8(i);
+		disp_printc(' ');
+		disp_phex32(baseAddress);
+		disp_printc(' ');
+		disp_phex32(size);
+		disp_printc(' ');
+		disp_phex8(type);
+		*/
+		
 		if(type == 1)
 		{
 			//See if we have found the upper memory location
@@ -126,16 +149,16 @@ void mem_read_e820()
 				bucketStartLocation = baseAddress + size - 16 - (16 - ((baseAddress + size) % 16));
 				nextBucketLocation = bucketStartLocation;
 				nextPageLocation = bucketStartLocation - (sizeof(struct kbucket) * ((size / 4096)));
-				//disp_phex32(bucketStartLocation);
-				//disp_printc('\n');
-				//disp_phex32(nextPageLocation);
-				//disp_printc('\n');
-				//disp_phex32(baseAddress);
-				//disp_printc('\n');
-				//disp_phex32(size);
-				//disp_printc('\n');
-				
-				return;
+				/*
+				disp_phex32(bucketStartLocation);
+				disp_printc('\n');
+				disp_phex32(nextPageLocation);
+				disp_printc('\n');
+				disp_phex32(baseAddress);
+				disp_printc('\n');
+				disp_phex32(size);
+				disp_printc('\n');
+				*/
 			}
 			else
 			{

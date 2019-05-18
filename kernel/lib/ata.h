@@ -11,6 +11,12 @@ void ata_initdrive();
 //Returns: A 512 byte array of the data read from the location provided
 unsigned char* ata_readsector(unsigned int LBA);
 
+//ata_readsectors
+//Param: LBA-the Logical Block Address of the location to be read, sectors-the number of sectors to read(Limit of 255 sectors)
+//Takes the location on the disk to be read and reads the number of sectors specified
+//Returns: A 512 byte times the number of sectors byte array of the data read from the location provided
+unsigned char* ata_readsectors(unsigned int LBA, unsigned char sectors);
+
 //ata_waitfordrive
 //Waits for the drive to be ready for the next command
 void ata_waitfordrive();

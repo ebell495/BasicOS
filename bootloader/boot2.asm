@@ -1,7 +1,7 @@
 [org 0x1000]			  	;Tell the assembler that we are loaded at the memory location 0x1000
 [bits 16]
 
-KERNEL_OFFSET equ 0x2000
+KERNEL_OFFSET equ 0x1500
 mmap_ent times 4 dw 0
 
 mov [BOOT_DRIVE], dl		;Passed the boot drive to the 
@@ -16,9 +16,11 @@ jmp $
 
 loadKernel:
 	mov bx, KERNEL_OFFSET	;Store the kernel data in the memory location at this label
-	mov dh, 45				;Load in 45 Sectors or 22.5KB of kernel data
+	mov dh, 32				;Load in 32 Sectors or 22.5KB of kernel data
+							;BIG NOTE: The kernel is almost out of space
+							;Will need to start breaking it apart and loading in once we actually enter the kernel
 	mov dl, [BOOT_DRIVE]	;Load from the boot drive that the bios provided earlier and was passed from the first stage
-	mov cl, 0x06 			;Kernel is in the 6th sector (1: 1st stage, 2-5: Second Stage)
+	mov cl, 0x04 			;Kernel is in the 6th sector (1: 1st stage, 2-5: Second Stage)
 	call diskLoad
 	
 	ret
@@ -46,7 +48,7 @@ switchToPM:
 do_e820:
 	pusha
 	xor di, di					;Zero out the offset pointer register
-	mov bx, 0x400				;Prepare 0x400 for the segment register
+	mov bx, 0x600				;Prepare 0x600 for the segment register
 	mov es, bx					;This means that the mem address is ex * 0x10 + di
 	
 	xor ebx, ebx				;ebx must be 0 to start
@@ -104,8 +106,6 @@ do_e820:
 	call printnl
 	jmp $
 
-DISK_ERR_STR_A:
-	db 'Disk Read ErrorA', 0
 MEM_DETECT_ERROR: db 'Error Detecting Memory', 0
 MEM_READ_SUC: db 'Detected Memory Sucessfully', 0
 BOOT_DRIVE: dw 0
@@ -212,4 +212,4 @@ A20_SET db "A20 line is set", 0
 A20_NS db "A20 line is not set", 0
 
 ;Allocate quite a bit of space (2KB) to the second stage for future proofing
-times 2048-($-$$) db 0
+times 1024-($-$$) db 0

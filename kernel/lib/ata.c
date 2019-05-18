@@ -58,6 +58,7 @@ unsigned char* ata_readsector(unsigned int LBA)
 	pbyteout(0x1F7, 0x20);
 	
 	ata_waitfordrive();
+	ata_waitrw();
 	
 	for(int j = 0; j < 256; j++)
 	{
@@ -71,7 +72,6 @@ unsigned char* ata_readsector(unsigned int LBA)
 
 void ata_writesector(unsigned int LBA, unsigned char* data)
 {
-	
 	pbyteout(0x1F6, 0xE0);
 	pbyteout(0x1F1, 0);
 		
@@ -84,6 +84,7 @@ void ata_writesector(unsigned int LBA, unsigned char* data)
 	pbyteout(0x1F7, 0x30);
 	
 	ata_waitfordrive();
+	ata_waitrw();
 	
 	for(int j = 0; j < 256; j++)
 	{
@@ -92,11 +93,12 @@ void ata_writesector(unsigned int LBA, unsigned char* data)
 	}
 	
 	pbyteout(0x1F7, 0xE7);
+	ata_waitfordrive();
 }
 
 void ata_waitfordrive()
 {
-	//Delay for 400ms
+	//Delay for 400ns
 	pbytein(0x3F6);
 	pbytein(0x3F6);
 	pbytein(0x3F6);
@@ -104,22 +106,26 @@ void ata_waitfordrive()
 	
 	unsigned char status = pbytein(0x1F7);
 	
-	if((status & 0x1) != 0)
+	p_serial_write(status);
+	
+	if((status & 0b00000001) == 1 || (status & 0b00100000) == 1)
 	{
-		disp_printstring("Error with drive\n");
-		disp_phex8(pbytein(0x1F1));
+		disp_printstring("Disk Error, Halting: Error Reg: ");
+		disp_phex32(pbytein(0x1F1));
 	}
-	else
+	
+	while((status & 0b10000000) == 1 || (status & 0b01000000) == 0)
 	{
-		while( (status & 0x80) != 0)
-		{
-			status = pbytein(0x1F7);
-		}
-		
-		while( (status & 0x8) == 0)
-		{
-			status = pbytein(0x1F7);
-		}
+		status = pbytein(0x1F7);
+	}
+}
+
+void ata_waitrw()
+{
+	unsigned char status = pbytein(0x1F7);
+	while((status & 0b00001000) == 0)
+	{
+		status = pbytein(0x1F7);
 	}
 }
 
