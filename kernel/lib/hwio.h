@@ -58,4 +58,6 @@ void p_serial_writestring(char* string);
 //Params: bytes-the bytes of data to send on the serial port, size-the size of the data to send
 //Sends multiple bytes of data to the serial port
 void p_serial_writebytes(char* bytes, unsigned int size);
+
+void p_serial_writenum();
 #endif

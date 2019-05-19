@@ -83,19 +83,18 @@ void main()
 	//Write it back to the 1st sector
 	ata_writesector(0, read);
 	
-	
-	//Test interrupt
-	
 	int secCount = 0;
 	
-	while(secCount < 20)
+	while(secCount < 1)
 	{
 		timer_wait(TICKS_PER_SECOND);
 		disp_printstring(" Second: ");
 		secCount++;
 	}
 	
-
+	int k = -138291;
+	p_serial_writenum(k);
+	
 	//Simple write to display loop
 	while(1)
 	{

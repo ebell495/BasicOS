@@ -86,4 +86,18 @@ void p_serial_writebytes(char* bytes, unsigned int size)
 	}
 }
 
+void p_serial_writenum(int num)
+{
+	if(num < 0)
+	{
+		p_serial_write('-');
+		num *= -1;
+	}
+	
+	if(num > 9)
+		p_serial_writenum(num / 10);
+	
+	p_serial_write('0' + (num % 10));
+}
+
 
