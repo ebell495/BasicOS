@@ -82,7 +82,7 @@ void mem_read_e820()
 				highMemLocation = baseAddress;
 				highMemSize = size;
 				
-				bucketStartLocation = baseAddress + size - 16 - (16 - ((baseAddress + size) % 16));
+				bucketStartLocation = baseAddress;
 				//nextBucketLocation = bucketStartLocation;
 				//nextPageLocation = bucketStartLocation - (sizeof(struct kbucket) * ((size / 4096)));
 				/*

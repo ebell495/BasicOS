@@ -131,13 +131,13 @@ void ata_waitfordrive()
 	
 	p_serial_write(status);
 	
-	if((status & 0b00000001) == 1 || (status & 0b00100000) == 1)
+	if((status & 0b00000001) == 0b00000001 || (status & 0b00100000) == 0b00100000)
 	{
 		disp_printstring("Disk Error, Halting: Error Reg: ");
 		disp_phex32(pbytein(0x1F1));
 	}
 	
-	while((status & 0b10000000) == 1 || (status & 0b01000000) == 0)
+	while((status & 0b10000000) == 0b10000000 || (status & 0b01000000) != 0b01000000)
 	{
 		status = pbytein(0x1F7);
 		p_serial_write(status);
@@ -149,10 +149,123 @@ void ata_waitrw()
 	p_serial_writestring("\nATA_WAIT RW\n");
 	unsigned char status = pbytein(0x1F7);
 	p_serial_write(status);
-	while((status & 0b00001000) == 0)
+	while((status & 0b00001000) != 0b00001000)
 	{
 		status = pbytein(0x1F7);
 		p_serial_write(status);
 	}
+}
+
+void ata_writebytes(unsigned int LBA, unsigned short offset, unsigned char* data, unsigned int dataSize)
+{
+	if(offset < 0)
+		return;
+
+	while(offset >= 512)
+	{
+		LBA++;
+		offset -= 512;
+	}
+
+	if(dataSize + offset <= 512)
+	{
+		unsigned char* readData = ata_readsector(LBA);
+		memcpy((void*)(readData + offset), data, dataSize-offset);
+		ata_writesector(LBA, readData);
+	}
+	else
+	{
+		unsigned char* readData = ata_readsector(LBA);
+		memcpy((void*)(readData + offset), data, 512-offset);
+		dataSize -= (512-offset);
+		ata_writesector(LBA, readData);
+		LBA++;
+		int count = 0;
+
+		while(dataSize > 512)
+		{
+			ata_writesector(LBA, (void*)(data + offset + (count * 512)));
+			LBA++;
+			dataSize -= 512;
+			count++;
+		}
+
+		readData = ata_readsector(LBA);
+		memcpy((void*)(readData), (void*)(data + offset + (count * 512)), dataSize);
+		ata_writesector(LBA, readData);
+	}
+}
+
+unsigned char* ata_readbytes(unsigned int LBA, unsigned int offset, unsigned int size)
+{
+	unsigned char* ret = kmalloc(size);
+
+	p_serial_writestring("\nRead Bytes: Size: ");
+	p_serial_writenum(size);
+	p_serial_writestring(" Offset: ");
+	p_serial_writenum(offset);
+	p_serial_writestring(" LBA: ");
+	p_serial_writenum(LBA);
+	p_serial_write('\n');
+
+	if(offset < 0)
+		return 0;
+
+	while(offset >= 512)
+	{
+		LBA++;
+		offset -= 512;
+	}
+
+	p_serial_writestring("New Offset: ");
+	p_serial_writenum(offset);
+	p_serial_writestring(" LBA: ");
+	p_serial_writenum(LBA);
+	p_serial_write('\n');
+
+	if(size + offset <= 512)
+	{
+		unsigned char* readData = ata_readsector(LBA);
+		memcpy((void*)ret, (void*)(readData + offset), size);
+
+		return ret;
+	}
+	else
+	{
+		unsigned int amtRead = 0;
+		unsigned char* readData = ata_readsector(LBA);
+		memcpy((void*)ret, (void*)(readData + offset), 512-offset);
+		size -= (512-offset);
+		amtRead += (512-offset);
+		LBA+=1;
+
+		p_serial_writestring("New Size: ");
+		p_serial_writenum(size);
+		p_serial_writestring(" LBA: ");
+		p_serial_writenum(LBA);
+		p_serial_writestring(" Amount Read: ");
+		p_serial_writenum(amtRead);
+		p_serial_write('\n');
+
+		while(size > 512)
+		{
+			readData = ata_readsector(LBA);
+			memcpy((void*)(ret + amtRead), readData, 512);
+			LBA+=1;
+			size -= 512;
+			amtRead += 512;
+			p_serial_writestring("New Size: ");
+			p_serial_writenum(size);
+			p_serial_writestring(" LBA: ");
+			p_serial_writenum(LBA);
+			p_serial_writestring(" Amount Read: ");
+			p_serial_writenum(amtRead);
+			p_serial_write('\n');
+		}
+
+		readData = ata_readsector(LBA);
+		memcpy((void*)(ret + amtRead), readData, size);
+	}
+	return ret;
 }
 

@@ -86,7 +86,7 @@ void p_serial_writebytes(char* bytes, unsigned int size)
 	}
 }
 
-void p_serial_writenum(int num)
+void p_serial_writenum(long num)
 {
 	if(num < 0)
 	{
