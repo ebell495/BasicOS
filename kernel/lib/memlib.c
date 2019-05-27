@@ -30,7 +30,7 @@ void* kmalloc(unsigned int size)
 {
 	int numPages = (size / K_PAGE_SIZE) + 1;
 	void* ret = (void*)bucketStartLocation;
-	bucketStartLocation += numPages;
+	bucketStartLocation += (numPages * K_PAGE_SIZE);
 	
 	return ret;
 }

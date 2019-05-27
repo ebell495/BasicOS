@@ -47,8 +47,6 @@ void main()
 	
 	disp_printstring(alp);
 	
-	kfree(alp);
-	
 	//Read the first sector of the drive
 	//The last 2 bytes should be 55AA
 	
@@ -91,13 +89,6 @@ void main()
 		disp_printstring(" Second: ");
 		secCount++;
 	}
-	
-	int k = -138291;
-	p_serial_writenum(k);
-	
-	unsigned char* reada = ata_readbytes(0, 45, 800);
-	p_serial_writestring("\n\n\n");
-	p_serial_writebytes(reada, 800);
 	
 	//Simple write to display loop
 	while(1)
