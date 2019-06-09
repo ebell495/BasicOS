@@ -35,15 +35,19 @@ void ata_initdrive()
 {
 	pbyteout(ATA_PRI_DRIVE_REG, 0xA0);
 	
+	/*
+
 	unsigned char cl = pbytein(ATA_PRI_LBA_MID_REG);
 	unsigned char ch = pbytein(ATA_PRI_LBA_HIGH_REG);
-	
+
 	if (cl==0x14 && ch==0xEB) disp_printstring("PATAPI Drive detected\n");
 	else if (cl==0x69 && ch==0x96) disp_printstring("SATAPI Drive detected\n");
 	else if (cl==0 && ch == 0) disp_printstring("PATA Drive detected\n");
 	else if (cl==0x3c && ch==0xc3) disp_printstring("SATA Drive detectedd\n");
 	else disp_printstring("Error, Drive Unknown\n");
 	
+	*/
+
 	pbyteout(ATA_PRI_DRIVE_REG, 0xA0);
 	
 	pbyteout(ATA_PRI_SEC_COUNT_REG, 0);
@@ -62,10 +66,12 @@ void ata_initdrive()
 		driveInfo[j] = pwordin(ATA_PRI_DATA_REG);
 		if(j == 61)
 		{
+			/*
 			disp_printstring("Number of LBA28 Sectors: ");
 			disp_phex16(driveInfo[j]);
 			disp_phex16(driveInfo[j-1]);
 			disp_printc('\n');
+			*/
 		}
 	}
 }

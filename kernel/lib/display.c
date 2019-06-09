@@ -216,6 +216,20 @@ void disp_phex8(unsigned char x)
 	}
 }
 
+void disp_pnum(long x)
+{
+	if(x < 0)
+	{
+		disp_printc('-');
+		x *= -1;
+	}
+	
+	if(x > 9)
+		disp_pnum(x / 10);
+	
+	disp_printc('0' + (x % 10));
+}
+
 //Clears the location under the cursor
 void disp_clearcursor()
 {

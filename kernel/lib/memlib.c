@@ -24,6 +24,19 @@ void* memcpy(void* restrict dstptr, const void* restrict srcptr, int size)
 	return dstptr;
 }
 
+int memcmp(const void* restrict ptr1, const void* restrict ptr2, unsigned int size)
+{
+	int cmp = 0;
+	for(unsigned int i = 0; i < size; i++)
+	{
+		cmp = ((char*)ptr1)[i] - ((char*)ptr2)[i];
+		if(cmp!=0)
+			return cmp;
+	}
+
+	return 0;
+}
+
 //Kernel memory allocation
 
 void* kmalloc(unsigned int size)

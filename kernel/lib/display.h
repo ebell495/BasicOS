@@ -51,4 +51,6 @@ void disp_phex8(unsigned char x);
 void disp_phex16(unsigned short x);
 void disp_phex32(unsigned int x);
 
+void disp_pnum(long x);
+
 #endif

@@ -26,7 +26,7 @@ jmp $
 ;Data
 BOOT_DRIVE: dw 0
 
-times 510-($-$$) db 0 	;Fill the rest of the file with 0's to make a boot sector
+%include "bootloader/library/mbr.asm"
 
 db 0x55 				;The magic boot number
 db 0xAA
