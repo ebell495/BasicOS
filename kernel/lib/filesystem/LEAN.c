@@ -395,9 +395,9 @@ struct Superblock* LEAN_createLEANPartition(unsigned char partitionNumber, char*
 	kernelFile->linkCount = 1;
 	kernelFile->attributes = iaSYS_FILE;
 	kernelFile->fileSize = 32768;
-	kernelFile->sectorCount = 61;
+	kernelFile->sectorCount = 65;
 	kernelFile->extentStarts[0] = 8;
-	kernelFile->extentSizes[0] = 61;
+	kernelFile->extentSizes[0] = 65;
 
 	LEAN_writeInode(kernelFile);
 

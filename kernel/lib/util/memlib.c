@@ -41,6 +41,16 @@ int memcmp(const void* restrict ptr1, const void* restrict ptr2, unsigned int si
 	return 0;
 }
 
+void memset(const void* restrict ptr1, unsigned char val, int size)
+{
+	unsigned char* dst = ((unsigned char*) ptr1);
+	for (int i = 0; i < size; i++)
+	{
+		*dst = val;
+		dst++;
+	}
+}
+
 //Kernel memory allocation
 
 void* kmalloc(unsigned int size)
@@ -137,6 +147,7 @@ void mem_markbitmap(unsigned int loc, unsigned char status)
 	{
 		bMap[0] = bMap[0] ^ (1 << bit);
 		memInUse -= K_PAGE_SIZE;
+		memset((void*)(loc*K_PAGE_SIZE+highMemLocation), 0, K_PAGE_SIZE);
 	}
 	else
 	{
@@ -203,10 +214,6 @@ void mem_read_e820()
 				bucketStartLocation = baseAddress;
 
 				bitmapStartLocation = (size + baseAddress) - (size / K_PAGE_SIZE / 8);
-				disp_pnum(highMemLocation);
-				disp_printc(' ');
-				disp_pnum(bitmapStartLocation);
-				disp_printc('\n');
 				//nextBucketLocation = bucketStartLocation;
 				//nextPageLocation = bucketStartLocation - (sizeof(struct kbucket) * ((size / 4096)));
 				/*
