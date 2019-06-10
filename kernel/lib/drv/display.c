@@ -1,6 +1,6 @@
 #include "display.h"
 #include "hwio.h"
-#include "memlib.h"
+#include "../util/memlib.h"
 
 #define VMEM_LOCATION 0xB8000
 

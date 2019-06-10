@@ -1,15 +1,19 @@
 #include "memlib.h"
 #include "memlib_ext.h"
-#include "display.h"
+#include "../drv/display.h"
+
 #define E820_LOC 0x10000
 #define E820_COUNT_LOC 0xFFFD
-#define K_PAGE_SIZE 64
+#define K_PAGE_SIZE 520
 
 unsigned int lowMemSize = 0x0;
 unsigned int highMemLocation = 0x0;
 unsigned int highMemSize = 0x0;
 
 unsigned int bucketStartLocation = 0x0;
+unsigned int bitmapStartLocation = 0x0;
+
+unsigned int memInUse = 0;
 
 void* memcpy(void* restrict dstptr, const void* restrict srcptr, int size) 
 {
@@ -41,16 +45,117 @@ int memcmp(const void* restrict ptr1, const void* restrict ptr2, unsigned int si
 
 void* kmalloc(unsigned int size)
 {
-	int numPages = (size / K_PAGE_SIZE) + 1;
-	void* ret = (void*)bucketStartLocation;
-	bucketStartLocation += (numPages * K_PAGE_SIZE);
+	unsigned int numOfPage = (size+8) / K_PAGE_SIZE + ((size+8) % K_PAGE_SIZE != 0);
+
+	int start = findNumMemLoc(numOfPage);
+
+	start *= K_PAGE_SIZE;
+
+	if(start < 0)
+	{
+		disp_printstring("Error allocating memory, no space available");
+		return 0;
+	}
 	
+	void* ret = (void*)(highMemLocation + start + 8);
+
+	for(int i = 0; i < numOfPage; i++)
+	{
+		mem_markbitmap(i + (start/K_PAGE_SIZE), 1);
+	}
+
+	unsigned int* pt_numPage = (unsigned int*)(highMemLocation + start);
+	*pt_numPage = numOfPage;
+
+	pt_numPage = (unsigned int*)(highMemLocation + start + 4);
+	*pt_numPage = (start / K_PAGE_SIZE);
+
 	return ret;
 }
 
 void kfree(void* pointer)
 {
+	unsigned int size = *(unsigned int*)(pointer-8);
+	unsigned int bmapLoc = *(unsigned int*)(pointer-4);
+
+	for(int i = 0; i < size; i++)
+	{
+		mem_markbitmap(bmapLoc + i, 0);
+	}
+
 	return;
+}
+
+unsigned int mem_getUsedMem()
+{
+	return memInUse;
+}
+
+unsigned int mem_getFreeMem()
+{
+	return bitmapStartLocation -  highMemLocation - mem_getUsedMem();
+}
+
+int findNumMemLoc(unsigned int num)
+{
+	unsigned int start = 0;
+	unsigned int maxCon = 0;
+
+	for(int i = 0; i < bitmapStartLocation - highMemLocation; i++)
+	{
+		if(mem_checkbitmap(i) == 0)
+		{
+			maxCon += 1;
+
+			if(maxCon == num)
+			{
+				return start;
+			}
+		}
+		else
+		{
+			maxCon = 0;
+			start = (i+1);
+		}
+
+
+	}
+	return -1;
+}
+
+void mem_markbitmap(unsigned int loc, unsigned char status)
+{
+	unsigned int byte = 0;
+	unsigned char bit = 0;
+
+	byte = loc / 8;
+	bit = loc % 8;
+
+	unsigned char* bMap = (unsigned char*)(bitmapStartLocation + byte);
+
+	if(status == 0)
+	{
+		bMap[0] = bMap[0] ^ (1 << bit);
+		memInUse -= K_PAGE_SIZE;
+	}
+	else
+	{
+		bMap[0] = bMap[0] | (1 << bit);
+		memInUse += K_PAGE_SIZE;
+	}
+}
+
+unsigned char mem_checkbitmap(unsigned int loc)
+{
+	unsigned int byte = 0;
+	unsigned char bit = 0;
+
+	byte = loc / 8;
+	bit = loc % 8;
+
+	unsigned char* bMap = (unsigned char*)(bitmapStartLocation + byte);
+
+	return ((bMap[0] & (1 << bit)) > 0);
 }
 
 //Reads the e820 map that was loaded during the boot sequence
@@ -75,7 +180,7 @@ void mem_read_e820()
 		}
 		
 		unsigned char type = (unsigned char) *((int*)(E820_LOC + (24*i) + (16)));
-		
+
 		/*
 		disp_printc('\n');
 		disp_phex8(i);
@@ -96,6 +201,12 @@ void mem_read_e820()
 				highMemSize = size;
 				
 				bucketStartLocation = baseAddress;
+
+				bitmapStartLocation = (size + baseAddress) - (size / K_PAGE_SIZE / 8);
+				disp_pnum(highMemLocation);
+				disp_printc(' ');
+				disp_pnum(bitmapStartLocation);
+				disp_printc('\n');
 				//nextBucketLocation = bucketStartLocation;
 				//nextPageLocation = bucketStartLocation - (sizeof(struct kbucket) * ((size / 4096)));
 				/*

@@ -1,5 +1,5 @@
 #include "timer.h"
-#include "hwio.h"
+#include "../drv/hwio.h"
 
 unsigned long systicks = 0;
 
@@ -20,6 +20,29 @@ unsigned int time_getsystime()
 unsigned long time_getsysticks()
 {
 	return systicks;
+}
+
+unsigned long long time_getCMOSTime()
+{
+	pbyteout(0x70, (1 << 7) | (0x00));
+	unsigned char sec = pbytein(0x71);
+
+	pbyteout(0x70, (1 << 7) | (0x02));
+	unsigned char min = pbytein(0x71);
+
+	pbyteout(0x70, (1 << 7) | (0x04));
+	unsigned char hours = pbytein(0x71);
+
+	pbyteout(0x70, (1 << 7) | (0x07));
+	unsigned char days = pbytein(0x71);
+
+	pbyteout(0x70, (1 << 7) | (0x08));
+	unsigned char months = pbytein(0x71);
+
+	pbyteout(0x70, (1 << 7) | (0x09));
+	unsigned char years = pbytein(0x71);
+
+	return 31557600*years + 2629800*months + 87660*days + 3652*hours + 60*min + sec;
 }
 
 void timer_timeinterrupt()

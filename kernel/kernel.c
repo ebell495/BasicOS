@@ -1,6 +1,7 @@
 #include "lib/klib.h"
 
 //Entry point of the kernel
+
 void main()
 {
 	//Start functions
@@ -90,37 +91,49 @@ void main()
 		disp_printstring(" Second: ");
 		secCount++;
 	}
-	*/
-	/*
-	struct Superblock* sb = kmalloc(512);
+	*/	
 
-	sb->magic = 0x4E41454C;
-	sb->fsVersion = 0x0006;
-	sb->preallocCount = 0x12;
-	sb->logSectorsPerBand = 12;
-	sb->state = 1;
-	unsigned char uid[16] = {0x71,0x56,0xD7,0xC4,0xAD,0xE2,0x43,0x30,0xA9,0x2E,0xCF,0x5C,0x65,0x3A,0xEB,0x48};
-	for(int i = 0; i < 16; i++)
-	{
-		sb->uuid[i] = uid[i];
-	}
-	sb->sectorCount = 64;
-	sb->freeSectorCount = 29;
-	sb->primarySuper = 3;
-	sb->backupSuper = 63;
-	sb->bitmapStart = 4;
-	sb->rootInode = 5;
+	struct Superblock* sb = LEAN_createLEANPartition(0, "Test Volume", 4096);
 
-	unsigned int ck = computeChecksum(sb, 512);
-	sb->checksum = ck;
+	sb = LEAN_readSuperblock();
 
-	ata_writesector(3, (unsigned char*) sb);
-	ata_writesector(3+64-1, (unsigned char*) sb);
-	*/
+	kfree(sb);
 
-	struct Superblock* sb = createLEANPartition(0, "Test Volume", 64);
+	disp_printc('\n');
+	disp_pnum(ata_getNumSectors());
+	disp_printc('\n');
 
-	sb = readSuperblock();
+	disp_phex8(LEAN_checkBitmap(0));
+	disp_printc('\n');
+	disp_phex8(LEAN_checkBitmap(3));
+	disp_printc('\n');
+	disp_phex8(LEAN_checkBitmap(6));
+	disp_printc('\n');
+	disp_phex8(LEAN_checkBitmap(10));
+	disp_printc('\n');
+	disp_phex8(LEAN_checkBitmap(75));
+	disp_printc('\n');
+	disp_phex8(LEAN_checkBitmap(4094));
+	disp_printc('\n');
+
+	struct DirectoryEntry* de = LEAN_createDirectoryEntry(5, FT_DIRECTORY, "aaaaaaaaaaaaaaaASJDKASJHDWIUJEDAKSJdhkjsadhlKJAHDWIUJED UISADKJhLSAKIJHADUAIWYE(*&$*(IUYHSAKJHRUJ#HRKJSDfhalkjdshalkdjhwiaeugdaluikGBHDGWAIUEGYTLWIUKDEAIKWUE&GYTWASKDgkahjdakwdjhIUWAGEDIWAUEajkHGDjakshdW<AGDIWULAKSjdhasjdaksdjhaWUJIEYDAWUIKEhasjdhAKSJDLKASJDLAWIDLSAKDJALSKDJ NM<DAMSND<N<SNDL LSKAJDLKJSALDKJSALDKJLASKDJLASKDJLAS DASLDJALKSJDIWJSKDJLASKDJLKASJDLSAKDJLAKSDJLKJLASLDKJASDLKSAJDLKJWEDLKJSDLAKSJDLASKDJLKLsjwiueijalskdj", 0);
+	LEAN_writeDirectoryEntry(5, de);
+	kfree(de->name);
+	kfree(de);
+
+	de = LEAN_createDirectoryEntry(5, FT_DIRECTORY, "Test Dire", 0);
+	LEAN_writeDirectoryEntry(5, de);
+	kfree(de->name);
+	kfree(de);
+
+	disp_printc('\n');
+	disp_printstring("Used mem(bytes): ");
+	disp_pnum(mem_getUsedMem());
+	disp_printc('\n');
+	disp_printstring("Free mem(bytes): ");
+	disp_pnum(mem_getFreeMem());
+
+	
 	
 	//Simple write to display loop
 	while(1)
@@ -155,5 +168,6 @@ void main()
 		}
 	}
 }
+
 
 

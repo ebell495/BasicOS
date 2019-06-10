@@ -1,7 +1,6 @@
 #ifndef _LEANh
 #define _LEANh
 //Helper Structs
-
 #define iaRUSR 				(1 << 8)
 #define iaWUSR 				(1 << 7)
 #define iaXUSR 				(1 << 6)
@@ -29,6 +28,9 @@
 #define iaSTD_DIR			iaUSR_ALL + iaFMT_DIRECTORY + iaINLINE_EXT_ATTR + iaPREALLOC + iaNO_ACCESS_TIME
 #define iaSYS_FILE			iaUSR_ALL + iaFMT_REGULAR + iaINLINE_EXT_ATTR + iaPREALLOC + iaNO_ACCESS_TIME + iaSYSTEM
 #define isSTD_FILE			iaUSR_ALL + iaFMT_REGULAR + iaINLINE_EXT_ATTR + iaPREALLOC + iaNO_ACCESS_TIME
+
+#define EXTENTS_PER_INODE 6
+#define EXTENTS_PER_INDIRECT 38
 
 struct Superblock
 {
@@ -71,8 +73,24 @@ struct Inode
 	unsigned long long firstIndirect;
 	unsigned long long lastIndirect;
 	unsigned long long fork;
-	unsigned long long extentStarts[6];
-	unsigned int extentSizes[6];
+	unsigned long long extentStarts[EXTENTS_PER_INODE];
+	unsigned int extentSizes[EXTENTS_PER_INODE];
+}__attribute__((packed));
+
+struct Indirect
+{
+	unsigned int checksum;
+	unsigned int magic;
+	unsigned long long sectorCount;
+	unsigned long long inode;
+	unsigned long long thisSector;
+	unsigned long long prevIndirect;
+	unsigned long long nextIndirect;
+	unsigned char extentCount;
+	unsigned char reserved1[3];
+	unsigned int reserved2;
+	unsigned long long extentStarts[EXTENTS_PER_INDIRECT];
+	unsigned int extentSizes[EXTENTS_PER_INDIRECT];
 }__attribute__((packed));
 
 struct PartitionTableEntry
@@ -91,22 +109,35 @@ struct DirectoryEntry
 	unsigned char type;
 	unsigned char recLen;
 	unsigned short nameLen;
-	char name[];
-};
+	char* name;
+}__attribute__((packed));
 
-unsigned int computeChecksum(const void* data, unsigned short size);
+unsigned int LEAN_computeChecksum(const void* data, unsigned short size);
 
-unsigned char checkBitmap(struct Superblock* sb, unsigned long sector);
-void markBitmap(struct Superblock* sb, unsigned long sector, unsigned char status);
+struct Superblock* LEAN_getCurrentSuperblock();
 
-struct Superblock* readSuperblock();
-void commitSuperblock(struct Superblock* sb);
+unsigned char LEAN_checkBitmap(unsigned long sector);
+void LEAN_markBitmap(unsigned long sector, unsigned char status);
 
-struct Inode* readNode(struct Superblock* sb, unsigned long nodeNumber);
-void writeInode(struct Superblock* sb, struct Inode* node);
+struct Superblock* LEAN_readSuperblock();
+void LEAN_commitSuperblock(struct Superblock* sb);
 
-struct Superblock* createLEANPartition(unsigned char partitionNumber, char* name, unsigned int size);
+struct Inode* LEAN_readNode(unsigned long nodeNumber);
+void LEAN_writeInode(struct Inode* node);
 
-unsigned char* createDirectoryEntry(unsigned long long inode, unsigned char type, char* name, unsigned short* size);
+struct Indirect* LEAN_readIndirect(unsigned long nodeNumber);
+void LEAN_writeIndirect(struct Indirect* indirect);
+
+struct Superblock* LEAN_createLEANPartition(unsigned char partitionNumber, char* name, unsigned int size);
+
+struct DirectoryEntry* LEAN_createDirectoryEntry(unsigned long long inode, unsigned char type, char* name, unsigned short* size);
+
+unsigned char* LEAN_dirEntryToByteArray(struct DirectoryEntry* directoryEntry);
+
+struct DirectoryEntry* LEAN_readDirectoryEntries(unsigned long long inode);
+
+void LEAN_writeDirectoryEntry(unsigned long long inode, struct DirectoryEntry* directoryEntry);
+
+unsigned int LEAN_getNextOpenSector(unsigned long long inode);
 
 #endif

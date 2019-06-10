@@ -48,4 +48,6 @@ unsigned char* ata_readbytes(unsigned int LBA, unsigned int offset, unsigned int
 //Sets the hasinterrupt bit for internal use
 //void ata_updateinterrupt();
 
+unsigned int ata_getNumSectors();
+
 #endif

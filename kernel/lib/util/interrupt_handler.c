@@ -1,6 +1,6 @@
-#include "hwio.h"
-#include "display.h"
-#include "ata.h"
+#include "../drv/hwio.h"
+#include "../drv/display.h"
+#include "../drv/ata.h"
 #include "timer.h"
 
 //Taken from https://wiki.osdev.org/Interrupts_tutorial
