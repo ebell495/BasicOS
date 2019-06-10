@@ -47,8 +47,6 @@ void main()
 	
 	disp_printstring(alp);
 	
-	kfree(alp);
-	
 	//Read the first sector of the drive
 	//The last 2 bytes should be 55AA
 	
@@ -83,19 +81,15 @@ void main()
 	//Write it back to the 1st sector
 	ata_writesector(0, read);
 	
-	
-	//Test interrupt
-	
 	int secCount = 0;
 	
-	while(secCount < 20)
+	while(secCount < 1)
 	{
 		timer_wait(TICKS_PER_SECOND);
 		disp_printstring(" Second: ");
 		secCount++;
 	}
 	
-
 	//Simple write to display loop
 	while(1)
 	{

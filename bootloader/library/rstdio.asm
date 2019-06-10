@@ -99,14 +99,29 @@ diskLoad:
 	
 	pop dx
 	cmp dh, al
-	jne diskErrorA
+	jne diskErrorB
 	
 	popa
 	ret
 
 ;These represent the error codes of the disk
 diskErrorA:
+	mov dx, ax
+	call printHex
 	mov bx, DISK_ERR_STR_A
 	call printnl
 	jmp $
+	
+diskErrorB:
+	mov dx, ax
+	call printHex
+	mov bx, DISK_ERR_STR_B
+	call printnl
+	jmp $
+	
+DISK_ERR_STR_A:
+	db 'Disk Read ErrorA', 0
+	
+DISK_ERR_STR_B:
+	db 'Disk Read ErrorB', 0
 

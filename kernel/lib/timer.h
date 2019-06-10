@@ -1,7 +1,7 @@
 #ifndef _timerh
 #define _timerh
 
-#define TICKS_PER_SECOND 100
+#define TICKS_PER_SECOND 1000
 
 void timer_init_timer();
 

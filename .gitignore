@@ -1,3 +1,5 @@
 *.o
 *.bin
 *.img
+basic_os.sublime-project
+*.sublime-workspace
