@@ -2,6 +2,7 @@
 #include "timer.h"
 #include "memlib.h"
 #include "../drv/display.h"
+#include "../drv/hwio.h"
 
 unsigned long long state[16];
 unsigned int index = 20;
@@ -40,6 +41,7 @@ unsigned int util_genRand()
 unsigned char* util_genUUID()
 {
 	unsigned char* ret = kmalloc(16);
+	//unsigned char ret[16];
 
 	unsigned long long rand = util_genRand();
 

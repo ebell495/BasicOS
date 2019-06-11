@@ -158,6 +158,58 @@ void LEAN_writeInode(struct Inode* node)
 	}
 }
 
+int LEAN_findNumMemLoc(unsigned int num)
+{
+	unsigned int start = 0;
+	unsigned int maxCon = 0;
+
+	for(int i = 0; i < currentSb->sectorCount; i++)
+	{
+		if(LEAN_checkBitmap(i) == 0)
+		{
+			maxCon += 1;
+
+			if(maxCon == num)
+			{
+				return start;
+			}
+		}
+		else
+		{
+			maxCon = 0;
+			start = (i+1);
+		}
+
+
+	}
+	return -1;
+}
+
+struct Inode* LEAN_createInode(unsigned int attrib)
+{
+	int sector = LEAN_findNumMemLoc(currentSb->preallocCount + 1);
+
+	if(sector == -1)
+	{
+		disp_printstring("Error creating node, No space left");
+		return 0;
+	}
+
+	struct Inode* ret = kmalloc(176);
+	ret->magic = 0x45444F4E;
+	ret->extentCount = 1;
+	ret->linkCount = 0;
+	ret->attributes = attrib;
+	ret->fileSize = 0;
+	ret->sectorCount = currentSb->preallocCount + 1;
+	ret->extentStarts[0] = sector;
+	ret->extentSizes[0] = currentSb->preallocCount + 1;
+
+	LEAN_writeInode(ret);
+
+	return ret;	
+}
+
 struct Indirect* LEAN_readIndirect(unsigned long nodeNumber)
 {
 	struct Indirect* ret = (struct Indirect*)ata_readsector(nodeNumber);
@@ -333,6 +385,8 @@ struct Superblock* LEAN_createLEANPartition(unsigned char partitionNumber, char*
 		sb->uuid[i] = uid[i];
 	}
 
+	kfree(uid);
+
 	unsigned char nameLoc = 0;
 	do
 	{
@@ -366,18 +420,14 @@ struct Superblock* LEAN_createLEANPartition(unsigned char partitionNumber, char*
 
 	rootNode->magic = 0x45444F4E;
 	rootNode->extentCount = 1;
-	rootNode->linkCount = 2;
+	rootNode->linkCount = 0;
 	rootNode->attributes = iaSTD_DIR;
-	rootNode->fileSize = 64;
+	rootNode->fileSize = 0;
 	rootNode->sectorCount = 3;
 	rootNode->extentStarts[0] = sbLocation + 2;
 	rootNode->extentSizes[0] = 3;
 
 	LEAN_writeInode(rootNode);
-
-	//ata_writebytes(sbLocation + 3, 0, LEAN_createDirectoryEntry(5, FT_DIRECTORY, ".", 0), 16);
-	//ata_writebytes(sbLocation + 3, 16, LEAN_createDirectoryEntry(5, FT_DIRECTORY, "..", 0), 16);
-	//ata_writebytes(sbLocation + 3, 32, LEAN_createDirectoryEntry(8, FT_REGULAR, "kernel.bin", 0), 32);
 
 	struct DirectoryEntry* de = LEAN_createDirectoryEntry(5, FT_DIRECTORY, ".", 0);
 	LEAN_writeDirectoryEntry(rootNode->extentStarts[0], de);
@@ -392,7 +442,7 @@ struct Superblock* LEAN_createLEANPartition(unsigned char partitionNumber, char*
 	struct Inode* kernelFile = kmalloc(176);
 	kernelFile->magic = 0x45444F4E;
 	kernelFile->extentCount = 1;
-	kernelFile->linkCount = 1;
+	kernelFile->linkCount = 0;
 	kernelFile->attributes = iaSYS_FILE;
 	kernelFile->fileSize = 32768;
 	kernelFile->sectorCount = 65;
@@ -452,15 +502,113 @@ unsigned char* LEAN_dirEntryToByteArray(struct DirectoryEntry* directoryEntry)
 
 struct DirectoryEntry* LEAN_readDirectoryEntries(unsigned long long inode)
 {
-	unsigned int dirEntryLoc = inode+1;
-	unsigned char* sector = ata_readsector(dirEntryLoc);
+	//unsigned int dirEntryLoc = inode+1;
+	//unsigned char* sector = ata_readsector(dirEntryLoc);
 	return 0;
+}
+
+struct DirectoryEntry* LEAN_findDirectoryEntry(unsigned long long inode, char* name)
+{
+	unsigned int dirEntryLoc = inode+1;
+	struct Inode* node = LEAN_readNode(inode);
+
+	int count = 0;
+
+	for(int i = 0; i < node->extentCount; i++)
+	{
+		for(int j = ((i==0) ? 1 : 0); j <= node->extentSizes[i]; j++)
+		{
+			count = 0;
+			dirEntryLoc = node->extentStarts[i] + j;
+			unsigned char* sector = ata_readsector(dirEntryLoc);
+
+			while(count < 512)
+			{
+				struct DirectoryEntry* header = (struct DirectoryEntry*)&sector[count];
+				if(memcmp(&sector[count+12], name, header->nameLen) == 0)
+				{
+					header = kmalloc(sizeof(struct DirectoryEntry));
+					memcpy(header, &sector[count], 12);
+					header->name = kmalloc(header->nameLen);
+					memcpy(header->name, &sector[count+12], header->nameLen);
+
+					kfree(node);
+					kfree(sector);
+					return header;
+				}
+
+				count += (header->recLen*16);
+			}
+		}
+	}
+
+	return 0;
+}
+
+struct DirectoryEntry* LEAN_findEndOfPath(char* path)
+{
+	int pathSize = 0;
+	unsigned long long cInode = currentSb->rootInode;
+
+	char** spPath = strsplt(path, '/', &pathSize);
+
+	struct DirectoryEntry* cDirEntry = 0;
+
+	for(int i = 0; i < pathSize; i++)
+	{
+		cDirEntry = LEAN_findDirectoryEntry(cInode,spPath[i]);
+
+		if(cDirEntry == 0)
+		{
+			disp_printstring("Error with path, No such directory for ");
+			disp_printstring(spPath[i]);
+
+			for(int j = i; i < pathSize; i++)
+				kfree(spPath[j]);
+
+			kfree(spPath);
+			return 0;
+		}
+
+		if(i != (pathSize - 1))
+		{
+			if(cDirEntry->type != FT_DIRECTORY)
+			{
+				disp_printstring("Error with path, Expected directory, found ");
+				disp_pnum(cDirEntry->type);
+
+				kfree(cDirEntry->name);
+				kfree(cDirEntry);
+
+				for(int j = i; i < pathSize; i++)
+					kfree(spPath[j]);
+
+				kfree(spPath);
+
+				return 0;
+			}
+
+			cInode = cDirEntry->inode;
+
+			kfree(cDirEntry->name);
+			kfree(cDirEntry);
+
+			kfree(spPath[i]);
+		}
+	}
+
+	kfree(spPath);
+	return cDirEntry;
 }
 
 void LEAN_writeDirectoryEntry(unsigned long long inode, struct DirectoryEntry* directoryEntry)
 {
 	unsigned int dirEntryLoc = inode+1;
 	struct Inode* node = LEAN_readNode(inode);
+	struct Inode* ptNode = LEAN_readNode(directoryEntry->inode);
+	ptNode->linkCount += 1;
+	LEAN_writeInode(ptNode);
+	kfree(ptNode);
 	
 	int count = 0;
 
@@ -479,6 +627,9 @@ void LEAN_writeDirectoryEntry(unsigned long long inode, struct DirectoryEntry* d
 				{
 					unsigned char* dirEntBytes = LEAN_dirEntryToByteArray(directoryEntry);
 					ata_writebytes(dirEntryLoc, count, dirEntBytes, directoryEntry->recLen*16);
+					node->fileSize += directoryEntry->recLen*16;
+					LEAN_writeInode(node);
+
 					kfree(node);
 					kfree(sector);
 					kfree(dirEntBytes);
@@ -495,6 +646,9 @@ void LEAN_writeDirectoryEntry(unsigned long long inode, struct DirectoryEntry* d
 	{
 		unsigned char* dirEntBytes = LEAN_dirEntryToByteArray(directoryEntry);
 		ata_writebytes(dirEntryLoc, 0, dirEntBytes, directoryEntry->recLen*16);
+
+		node->fileSize += directoryEntry->recLen*16;
+		LEAN_writeInode(node);
 
 		kfree(node);
 		kfree(dirEntBytes);

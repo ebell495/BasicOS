@@ -10,6 +10,7 @@
 #include "util/timer.h"
 #include "util/utils.h"
 #include "filesystem/LEAN.h"
+#include "filesystem/file.h"
 
 #endif
 

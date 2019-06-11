@@ -14,6 +14,7 @@ unsigned int bucketStartLocation = 0x0;
 unsigned int bitmapStartLocation = 0x0;
 
 unsigned int memInUse = 0;
+unsigned int memMaxUse = 0;
 
 void* memcpy(void* restrict dstptr, const void* restrict srcptr, int size) 
 {
@@ -103,7 +104,17 @@ unsigned int mem_getUsedMem()
 
 unsigned int mem_getFreeMem()
 {
-	return bitmapStartLocation -  highMemLocation - mem_getUsedMem();
+	return mem_getMemSize() - mem_getUsedMem();
+}
+
+unsigned int mem_getPeakUse()
+{
+	return memMaxUse;
+}
+
+unsigned int mem_getMemSize()
+{
+	return bitmapStartLocation -  highMemLocation;
 }
 
 int findNumMemLoc(unsigned int num)
@@ -153,6 +164,8 @@ void mem_markbitmap(unsigned int loc, unsigned char status)
 	{
 		bMap[0] = bMap[0] | (1 << bit);
 		memInUse += K_PAGE_SIZE;
+		if(memInUse > memMaxUse)
+			memMaxUse = memInUse;
 	}
 }
 

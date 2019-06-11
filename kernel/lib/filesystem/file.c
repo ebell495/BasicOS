@@ -1,27 +1,14 @@
 #include "file.h"
 #include "../util/utils.h"
-
-Superblock* sb = 0;
-
-void setSuperblock(struct Superblock* superblock)
-{
-	sb = superblock;
-}
+#include "../util/memlib.h"
+#include "../drv/display.h"
 
 File* createFile(char* path)
 {
-	int numOfDir = 0;
-	char** spPath = strsplt(path, '/', &numOfDir);
-
-	if(numOfDir == 1)
-	{
-
-	}
-
 	return (void*)0;
 }
 
-File* createFile(char* path, unsigned int preAlloc)
+File* createFileWAlloc(char* path, unsigned int preAlloc)
 {
 	return (void*)0;
 }
@@ -34,21 +21,68 @@ File* openFile(char* path)
 void closeFile(File* file)
 {
 
+	kfree(file);
 }
 
-void deleteFile(File* file)
+void deleteFileWFile(File* file)
 {
 
 }
 
-void deleteFile(char* path)
+void deleteFileWPath(char* path)
 {
 
 }
 
 void createDirectory(char* path)
 {
+	int numOfDir = 0;
+	char** spPath = strsplt(path, '/', &numOfDir);
+	struct DirectoryEntry* cDir = 0;
 
+	unsigned long long cNode = LEAN_getCurrentSuperblock()->rootInode;
+	unsigned long long pNode = LEAN_getCurrentSuperblock()->rootInode;
+
+	for(int i = 0; i < numOfDir; i++)
+	{
+		cDir = LEAN_findDirectoryEntry(cNode, spPath[i]);
+
+		if(cDir->inode == 0)
+		{
+			struct Inode* newNode = LEAN_createInode(iaSTD_DIR);
+			cNode = newNode->extentStarts[0];
+
+			kfree(cDir->name);
+			kfree(cDir);
+
+			cDir = LEAN_createDirectoryEntry(cNode, FT_DIRECTORY, spPath[i], 0);
+			LEAN_writeDirectoryEntry(pNode, cDir);
+
+			struct DirectoryEntry* de = LEAN_createDirectoryEntry(cNode, FT_DIRECTORY, ".", 0);
+			LEAN_writeDirectoryEntry(cNode, de);
+
+			kfree(de->name);
+			kfree(de);
+
+			de = LEAN_createDirectoryEntry(pNode, FT_DIRECTORY, "..", 0);
+			LEAN_writeDirectoryEntry(cNode, de);
+
+			kfree(de->name);
+			kfree(de);
+
+			kfree(newNode);
+		}
+
+		pNode = cNode;
+		cNode = cDir->inode;
+
+		kfree(cDir->name);
+		kfree(cDir);
+		kfree(spPath[i]);
+	}
+
+	kfree(spPath[numOfDir]);
+	kfree(spPath);
 }
 
 void deleteDirectory(char* path)

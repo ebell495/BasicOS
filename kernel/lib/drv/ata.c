@@ -151,6 +151,7 @@ void ata_waitfordrive()
 	{
 		disp_printstring("Disk Error, Halting: Error Reg: ");
 		disp_phex32(pbytein(ATA_PRI_ERROR_REG));
+		__asm__("hlt");
 	}
 	
 	while((status & ATA_STATUS_BSY_BIT) == ATA_STATUS_BSY_BIT || (status & ATA_STATUS_RDY_BIT) != ATA_STATUS_RDY_BIT)

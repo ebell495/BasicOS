@@ -103,28 +103,40 @@ void main()
 	disp_pnum(ata_getNumSectors());
 	disp_printc('\n');
 
-	disp_phex8(LEAN_checkBitmap(0));
-	disp_printc('\n');
-	disp_phex8(LEAN_checkBitmap(3));
-	disp_printc('\n');
-	disp_phex8(LEAN_checkBitmap(6));
-	disp_printc('\n');
-	disp_phex8(LEAN_checkBitmap(10));
-	disp_printc('\n');
-	disp_phex8(LEAN_checkBitmap(75));
-	disp_printc('\n');
-	disp_phex8(LEAN_checkBitmap(4094));
-	disp_printc('\n');
+	// struct DirectoryEntry* de = LEAN_findDirectoryEntry(5, ".");
+	// if(de == 0)
+	// {
+	// 	disp_printstring("Failure");
+	// }
+	// else
+	// {
+	// 	disp_pnum(de->inode);
+	// 	disp_printc(' ');
+	// 	disp_pnum(de->type);
+	// 	disp_printc(' ');
+	// 	disp_pnum(de->recLen);
+	// 	disp_printc(' ');
+	// }
 
-	struct DirectoryEntry* de = LEAN_createDirectoryEntry(5, FT_DIRECTORY, "aaaaaaaaaaaaaaaASJDKASJHDWIUJEDAKSJdhkjsadhlKJAHDWIUJED UISADKJhLSAKIJHADUAIWYE(*&$*(IUYHSAKJHRUJ#HRKJSDfhalkjdshalkdjhwiaeugdaluikGBHDGWAIUEGYTLWIUKDEAIKWUE&GYTWASKDgkahjdakwdjhIUWAGEDIWAUEajkHGDjakshdW<AGDIWULAKSjdhasjdaksdjhaWUJIEYDAWUIKEhasjdhAKSJDLKASJDLAWIDLSAKDJALSKDJ NM<DAMSND<N<SNDL LSKAJDLKJSALDKJSALDKJLASKDJLASKDJLAS DASLDJALKSJDIWJSKDJLASKDJLKASJDLSAKDJLAKSDJLKJLASLDKJASDLKSAJDLKJWEDLKJSDLAKSJDLASKDJLKLsjwiueijalskdj", 0);
-	LEAN_writeDirectoryEntry(5, de);
-	kfree(de->name);
-	kfree(de);
+	// kfree(de->name);
+	// kfree(de);
 
-	de = LEAN_createDirectoryEntry(5, FT_DIRECTORY, "Test Dire", 0);
-	LEAN_writeDirectoryEntry(5, de);
-	kfree(de->name);
-	kfree(de);
+	struct Inode* testNode = LEAN_createInode(iaSTD_DIR);
+	struct DirectoryEntry* dirEntry = LEAN_createDirectoryEntry(testNode->extentStarts[0], FT_DIRECTORY, "Test Dir", 0);
+	LEAN_writeDirectoryEntry(LEAN_getCurrentSuperblock()->rootInode, dirEntry);
+
+	kfree(testNode);
+	kfree(dirEntry->name);
+	kfree(dirEntry);
+
+	unsigned int tickStart = time_getsysticks();
+	createDirectory("test/directory");
+	unsigned int tickEnd = time_getsysticks();
+
+	unsigned int ticks = tickEnd - tickStart;
+
+	disp_printc('\n');
+	disp_pnum(ticks);
 
 	disp_printc('\n');
 	disp_printstring("Used mem(bytes): ");
@@ -133,7 +145,12 @@ void main()
 	disp_printstring("Free mem(bytes): ");
 	disp_pnum(mem_getFreeMem());
 
-	
+	disp_printc('\n');
+	disp_printstring("Mem size(bytes): ");
+	disp_pnum(mem_getMemSize());
+	disp_printc('\n');
+	disp_printstring("Peak mem use(bytes): ");
+	disp_pnum(mem_getPeakUse());
 	
 	//Simple write to display loop
 	while(1)

@@ -125,6 +125,8 @@ void LEAN_commitSuperblock(struct Superblock* sb);
 struct Inode* LEAN_readNode(unsigned long nodeNumber);
 void LEAN_writeInode(struct Inode* node);
 
+struct Inode* LEAN_createInode(unsigned int attrib);
+
 struct Indirect* LEAN_readIndirect(unsigned long nodeNumber);
 void LEAN_writeIndirect(struct Indirect* indirect);
 
@@ -135,7 +137,8 @@ struct DirectoryEntry* LEAN_createDirectoryEntry(unsigned long long inode, unsig
 unsigned char* LEAN_dirEntryToByteArray(struct DirectoryEntry* directoryEntry);
 
 struct DirectoryEntry* LEAN_readDirectoryEntries(unsigned long long inode);
-
+struct DirectoryEntry* LEAN_findDirectoryEntry(unsigned long long inode, char* name);
+struct DirectoryEntry* LEAN_findEndOfPath(char* path);
 void LEAN_writeDirectoryEntry(unsigned long long inode, struct DirectoryEntry* directoryEntry);
 
 unsigned int LEAN_getNextOpenSector(unsigned long long inode);

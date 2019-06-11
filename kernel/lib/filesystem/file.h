@@ -13,19 +13,17 @@ typedef struct file
 
 
 File* createFile(char* path);
-File* createFile(char* path, unsigned int preAlloc);
+File* createFileWAlloc(char* path, unsigned int preAlloc);
 
 File* openFile(char* path);
 void closeFile(File* file);
 
-void deleteFile(File* file);
-void deleteFile(char* path);
+void deleteFileWFile(File* file);
+void deleteFileWPath(char* path);
 
 void createDirectory(char* path);
 void deleteDirectory(char* path);
 
 File** getFilesInPath(char* path, unsigned int* numFile);
-
-void setSuperblock(struct Superblock* sb);
 
 #endif

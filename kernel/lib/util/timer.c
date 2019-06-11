@@ -5,8 +5,8 @@ unsigned long systicks = 0;
 
 void timer_init_timer()
 {
-	int divisor = 1193180 / TICKS_PER_SECOND;
-	pbyteout(0x43, 0x36);             /* Set our command byte 0x36 */
+	int divisor = 1193182 / TICKS_PER_SECOND;
+	pbyteout(0x43, 0b00110100);             /* Set our command byte 0x36 */
     pbyteout(0x40, divisor & 0xFF);   			/* Set low byte of divisor */
     pbyteout(0x40, divisor >> 8);    			 /* Set high byte of divisor */
 	systicks = 0;

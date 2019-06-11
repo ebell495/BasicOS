@@ -8,6 +8,8 @@ void* kmalloc(unsigned int size);
 void kfree(void* pointer);
 unsigned int mem_getUsedMem();
 unsigned int mem_getFreeMem();
+unsigned int mem_getPeakUse();
+unsigned int mem_getMemSize();
 
 void mem_read_e820();
 
