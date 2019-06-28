@@ -20,7 +20,7 @@ loadKernel:
 							;BIG NOTE: The max size of the big kernel.bin is 116 sectors or 58KB
 							;Will need to start breaking it apart and loading in once we actually enter the kernel
 	mov dl, [BOOT_DRIVE]	;Load from the boot drive that the bios provided earlier and was passed from the first stage
-	mov cl, 0x04 			;Kernel is in the 6th sector (1: 1st stage, 2-5: Second Stage)
+	mov cl, 0x0A			;Kernel is in the 6th sector (1: 1st stage, 2-5: Second Stage)
 	call diskLoad
 	
 	ret
@@ -213,3 +213,6 @@ A20_NS db "A20 line is not set", 0
 
 ;Allocate quite a bit of space (2KB) to the second stage for future proofing
 times 1024-($-$$) db 0
+
+;Allocate space for the partition information
+times 3072 db 0

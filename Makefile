@@ -6,17 +6,20 @@ build:
 	nasm "kernel/asm/IRQHandler.asm" -f elf32 -o "bin/kernel/IRQHandler.o"
 	cat "bin/bootloader/boot1.bin" "bin/bootloader/boot2.bin" > "bin/bootloader/bootloader.bin"
 	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/kernel.c" -o "bin/kernel/kernel.o"
-	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/hwio.c" -o "bin/kernel/hwio.o"
-	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/display.c" -o "bin/kernel/display.o"
-	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/ps2k.c" -o "bin/kernel/ps2k.o"
-	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/memlib.c" -o "bin/kernel/memlib.o"
-	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/ata.c" -o "bin/kernel/ata.o"
-	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/interrupts.c" -o "bin/kernel/interrupts.o"
-	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/interrupt_handler.c" -o "bin/kernel/interrupt_handler.o"
-	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/timer.c" -o "bin/kernel/timer.o"
-	ld -melf_i386 -o "bin/kernel/kernel.bin" -Ttext 0x1500 "bin/kernel/kernelEntry.o" "bin/kernel/kernel.o"  "bin/kernel/display.o" "bin/kernel/hwio.o" "bin/kernel/ps2k.o" "bin/kernel/memlib.o" "bin/kernel/ata.o" "bin/kernel/IRQHandler.o" "bin/kernel/interrupts.o" "bin/kernel/interrupt_handler.o" "bin/kernel/timer.o" --oformat binary
+	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/drv/hwio.c" -o "bin/kernel/hwio.o"
+	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/drv/display.c" -o "bin/kernel/display.o"
+	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/drv/ps2k.c" -o "bin/kernel/ps2k.o"
+	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/util/memlib.c" -o "bin/kernel/memlib.o"
+	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/drv/ata.c" -o "bin/kernel/ata.o"
+	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/util/interrupts.c" -o "bin/kernel/interrupts.o"
+	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/util/interrupt_handler.c" -o "bin/kernel/interrupt_handler.o"
+	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/util/timer.c" -o "bin/kernel/timer.o"
+	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/filesystem/LEAN.c" -o "bin/kernel/LEAN.o"
+	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/util/utils.c" -o "bin/kernel/utils.o"
+	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/filesystem/file.c" -o "bin/kernel/file.o"
+	ld -melf_i386 -o "bin/kernel/kernel.bin" -Ttext 0x1500 "bin/kernel/kernelEntry.o" "bin/kernel/kernel.o"  "bin/kernel/display.o" "bin/kernel/hwio.o" "bin/kernel/ps2k.o" "bin/kernel/memlib.o" "bin/kernel/ata.o" "bin/kernel/IRQHandler.o" "bin/kernel/interrupts.o" "bin/kernel/interrupt_handler.o" "bin/kernel/timer.o" "bin/kernel/LEAN.o" "bin/kernel/utils.o" "bin/kernel/file.o" --oformat binary
 	cat "bin/bootloader/bootloader.bin" "bin/kernel/kernel.bin"> "image/os-image.img"
-	dd if=/dev/zero of=image/os-image.img bs=1 count=1 seek=75775
+	dd if=/dev/zero of=image/os-image.img bs=1 count=1 seek=2097151
 
 clean:
 	rm -r -f bin

@@ -1,6 +1,6 @@
 #include "interrupts.h"
-#include "hwio.h"
-#include "display.h"
+#include "../drv/hwio.h"
+#include "../drv/display.h"
 
 struct IDT_entry IDT[256];
 

@@ -1,6 +1,6 @@
 #include "display.h"
 #include "hwio.h"
-#include "memlib.h"
+#include "../util/memlib.h"
 
 #define VMEM_LOCATION 0xB8000
 
@@ -214,6 +214,20 @@ void disp_phex8(unsigned char x)
 			d += 7;
 		disp_printc(d);
 	}
+}
+
+void disp_pnum(long x)
+{
+	if(x < 0)
+	{
+		disp_printc('-');
+		x *= -1;
+	}
+	
+	if(x > 9)
+		disp_pnum(x / 10);
+	
+	disp_printc('0' + (x % 10));
 }
 
 //Clears the location under the cursor

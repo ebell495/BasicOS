@@ -1,6 +1,6 @@
 #include "ata.h"
 #include "hwio.h"
-#include "memlib.h"
+#include "../util/memlib.h"
 #include "display.h"
 
 //Drive Ports
@@ -31,19 +31,25 @@
 #define ATA_STATUS_RDY_BIT  0b01000000	  //Clear if the drive has spun down
 #define ATA_STATUS_BSY_BIT  0b10000000    //Set if the drive is preparing to send/receive data
 
+unsigned int numSectors = 0;
+
 void ata_initdrive()
 {
 	pbyteout(ATA_PRI_DRIVE_REG, 0xA0);
 	
+	/*
+
 	unsigned char cl = pbytein(ATA_PRI_LBA_MID_REG);
 	unsigned char ch = pbytein(ATA_PRI_LBA_HIGH_REG);
-	
+
 	if (cl==0x14 && ch==0xEB) disp_printstring("PATAPI Drive detected\n");
 	else if (cl==0x69 && ch==0x96) disp_printstring("SATAPI Drive detected\n");
 	else if (cl==0 && ch == 0) disp_printstring("PATA Drive detected\n");
 	else if (cl==0x3c && ch==0xc3) disp_printstring("SATA Drive detectedd\n");
 	else disp_printstring("Error, Drive Unknown\n");
 	
+	*/
+
 	pbyteout(ATA_PRI_DRIVE_REG, 0xA0);
 	
 	pbyteout(ATA_PRI_SEC_COUNT_REG, 0);
@@ -62,12 +68,18 @@ void ata_initdrive()
 		driveInfo[j] = pwordin(ATA_PRI_DATA_REG);
 		if(j == 61)
 		{
+			/*
 			disp_printstring("Number of LBA28 Sectors: ");
 			disp_phex16(driveInfo[j]);
 			disp_phex16(driveInfo[j-1]);
 			disp_printc('\n');
+			*/
+
+			numSectors = ((((unsigned int)driveInfo[j] << 16)) + driveInfo[j-1]);
 		}
 	}
+
+	kfree(driveInfo);
 }
 
 unsigned char* ata_readsector(unsigned int LBA)
@@ -123,7 +135,6 @@ void ata_writesector(unsigned int LBA, unsigned char* data)
 	
 	pbyteout(ATA_PRI_STATUS_COM_REG, ATA_COM_FLUSH);
 	ata_waitfordrive();
-	
 }
 
 void ata_waitfordrive()
@@ -140,6 +151,7 @@ void ata_waitfordrive()
 	{
 		disp_printstring("Disk Error, Halting: Error Reg: ");
 		disp_phex32(pbytein(ATA_PRI_ERROR_REG));
+		__asm__("hlt");
 	}
 	
 	while((status & ATA_STATUS_BSY_BIT) == ATA_STATUS_BSY_BIT || (status & ATA_STATUS_RDY_BIT) != ATA_STATUS_RDY_BIT)
@@ -173,6 +185,7 @@ void ata_writebytes(unsigned int LBA, unsigned short offset, unsigned char* data
 		unsigned char* readData = ata_readsector(LBA);
 		memcpy((void*)(readData + offset), data, dataSize);
 		ata_writesector(LBA, readData);
+		kfree(readData);
 	}
 	else
 	{
@@ -180,6 +193,7 @@ void ata_writebytes(unsigned int LBA, unsigned short offset, unsigned char* data
 		memcpy((void*)(readData + offset), data, 512-offset);
 		dataSize -= (512-offset);
 		ata_writesector(LBA, readData);
+		kfree(readData);
 		LBA++;
 		int count = 0;
 
@@ -194,6 +208,7 @@ void ata_writebytes(unsigned int LBA, unsigned short offset, unsigned char* data
 		readData = ata_readsector(LBA);
 		memcpy((void*)(readData), (void*)(data + offset + (count * 512)), dataSize);
 		ata_writesector(LBA, readData);
+		kfree(readData);
 	}
 }
 
@@ -214,7 +229,7 @@ unsigned char* ata_readbytes(unsigned int LBA, unsigned int offset, unsigned int
 	{
 		unsigned char* readData = ata_readsector(LBA);
 		memcpy((void*)ret, (void*)(readData + offset), size);
-
+		kfree(readData);
 		return ret;
 	}
 	else
@@ -222,6 +237,7 @@ unsigned char* ata_readbytes(unsigned int LBA, unsigned int offset, unsigned int
 		unsigned int amtRead = 0;
 		unsigned char* readData = ata_readsector(LBA);
 		memcpy((void*)ret, (void*)(readData + offset), 512-offset);
+		kfree(readData);
 		size -= (512-offset);
 		amtRead += (512-offset);
 		LBA+=1;
@@ -230,6 +246,7 @@ unsigned char* ata_readbytes(unsigned int LBA, unsigned int offset, unsigned int
 		{
 			readData = ata_readsector(LBA);
 			memcpy((void*)(ret + amtRead), readData, 512);
+			kfree(readData);
 			LBA+=1;
 			size -= 512;
 			amtRead += 512;
@@ -238,7 +255,13 @@ unsigned char* ata_readbytes(unsigned int LBA, unsigned int offset, unsigned int
 
 		readData = ata_readsector(LBA);
 		memcpy((void*)(ret + amtRead), readData, size);
+		kfree(readData);
 	}
 	return ret;
+}
+
+unsigned int ata_getNumSectors()
+{
+	return numSectors;
 }
 
