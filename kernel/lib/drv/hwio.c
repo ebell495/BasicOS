@@ -100,4 +100,101 @@ void p_serial_writenum(long num)
 	p_serial_write('0' + (num % 10));
 }
 
+void p_serial_printf(char* format, ...)
+{
+	int* varStart = (int*)(&format + 1);
+	int cVar = 0;
 
+	while(*format != 0)
+	{
+		if(*format == '\\')
+		{
+			format++;
+			if(*format == 'n')
+			{
+				p_serial_write('\n');
+			}
+			else
+			{
+				p_serial_write(*format);
+			}
+		}
+		else if(*format == '%')
+		{
+			format++;
+			if(*format == 'i')
+			{
+				p_serial_writenum(varStart[cVar++]);
+			}
+			else if(*format == 'c')
+			{
+				p_serial_write((char)varStart[cVar++]);
+			}
+			else if(*format == 's')
+			{
+				p_serial_writestring((char*)varStart[cVar++]);
+			}
+			else if(*format == 'x')
+			{
+				if(*(format + 1) == 'b' || *(format + 1) == 'c')
+				{
+					p_serial_phex8(varStart[cVar++]);
+				}
+				else if(*(format + 1) == 's')
+				{
+					p_serial_phex16(varStart[cVar++]);
+				}
+				else if(*(format + 1) == 'i')
+				{
+					p_serial_phex32(varStart[cVar++]);
+				}
+				format++;
+			}
+		}
+		else
+		{
+			p_serial_write(*format);
+		}
+
+		format++;
+	}
+}
+
+//Prints the hex representation of the short passed
+void p_serial_phex16(unsigned short x)
+{
+	for(int i = 12; i >= 0; i-=4)
+	{
+		unsigned char d = (x >> i) & 0x0F;
+		d += '0';
+		if(d > '9')
+			d += 7;
+		p_serial_write(d);
+	}
+}
+
+//Prints the hex representation of the integer passed
+void p_serial_phex32(unsigned int x)
+{
+	for(int i = 28; i >= 0; i-=4)
+	{
+		unsigned char d = (x >> i) & 0x0F;
+		d += '0';
+		if(d > '9')
+			d += 7;
+		p_serial_write(d);
+	}
+}
+
+//Prints the hex representation of the byte passed
+void p_serial_phex8(unsigned char x)
+{
+	for(int i = 4; i >= 0; i-=4)
+	{
+		unsigned char d = (x >> i) & 0x0F;
+		d += '0';
+		if(d > '9')
+			d += 7;
+		p_serial_write(d);
+	}
+}

@@ -2,21 +2,102 @@
 #include "../drv/display.h"
 #include "../drv/ata.h"
 #include "timer.h"
+#include "../drv/ps2k.h"
+#include "../thread/process.h"
+#include "memlib.h"
+#include "../thread/sched.h"
 
 //Taken from https://wiki.osdev.org/Interrupts_tutorial
+
+#define IRQ0_COUNT_FIRE 1
+
+struct Process proc;
 
 //System Timer
 void irq0_handler() 
 {
+	int scanCode = 0xDE;
+	doSwapInterrupt();
 	timer_timeinterrupt();
-	//disp_printstring("IRQ0 ");
+	//p_serial_printf("IRQ0 ");
 	pbyteout(0x20, 0x20); //EOI
 }
+
+int shift = 0;
 
 //Keyboard
 void irq1_handler() 
 {
 	//disp_printstring("IRQ1 ");
+
+	int scanCode = ps2_getscancode();
+	// scanCode = 0xDEAD;
+
+	// for(int i = 0; i < 64; i++)
+	// {
+	// 	p_serial_printf("%xi: %xi\n", (unsigned int*)((&scanCode + i)), *(unsigned int*)((&scanCode + i)));
+	// }
+
+	// p_serial_printf("irq0_handler Location: %xi\n", irq0_handler);
+
+	// memcpy(&(proc.savedState.registers), (unsigned int*)((&scanCode + 7)), 11*4);
+	// proc.savedState.registers.esp += 12;
+
+	// p_serial_printf("%xi, %xi, %xi", proc.savedState.registers.eax, proc.savedState.registers.eip, proc.savedState.registers.edx);
+
+	// if(proc.savedState.savedStack == 0)
+	// 	proc.savedState.savedStack = kmalloc(1024);
+
+	// memcpy(proc.savedState.savedStack, (unsigned char*) proc.savedState.registers.esp, proc.savedState.registers.ebp - proc.savedState.registers.esp);
+	// dumpMemLoc(proc.savedState.savedStack, 64);
+
+	//doSwapInterrupt();
+
+	//Backspace
+	if(scanCode == 0x0E)
+	{
+		//Displays backspace
+		disp_backspace();
+	}
+	//Shift
+	else if(scanCode == 0x36 || scanCode == 0x2A)
+	{
+		shift = 1;
+	}
+	//Return/Enter key
+	else if(scanCode == 0x1C)
+	{
+		//disp_printc('\n');
+	}
+	else if(scanCode == 0x48)
+	{
+		//disp_printc('a');
+		//disp_movecursor(0, 1);
+	}
+	else if(scanCode == 0x4D)
+	{
+		//disp_printc('b');
+	}
+	else if(scanCode == 0x50)
+	{
+		//disp_printc('c');
+		//disp_movecursor(0, -1);
+	}
+	else if(scanCode == 0x4B)
+	{	
+		//disp_printc('d');
+	}
+	//Otherwise its probably a character
+	else
+	{
+		char in = ps2_getchar(scanCode, shift);
+		//disp_phex32(scanCode);
+		disp_printc(in);
+		//p_serial_write(in);
+		//p_serial_writenum(time_getsysticks() & 0xFFFFFFFF);
+		p_serial_write(in);
+	}
+
 	pbyteout(0x20, 0x20); //EOI
 }
 
@@ -122,6 +203,14 @@ void irq14_handler()
 void irq15_handler() 
 {
 	disp_printstring("IRQ15 ");
+	pbyteout(0xA0, 0x20);
+	pbyteout(0x20, 0x20); //EOI
+}
+
+void irq_yield_preempt()
+{
+	doSwapInterrupt();
+
 	pbyteout(0xA0, 0x20);
 	pbyteout(0x20, 0x20); //EOI
 }

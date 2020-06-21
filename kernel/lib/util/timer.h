@@ -1,12 +1,13 @@
 #ifndef _timerh
 #define _timerh
 
-#define TICKS_PER_SECOND 1000
+#define TIMER_RELOAD_VALUE 597
+#define TIMER_MILLISECONDS_PER_TICK TIMER_RELOAD_VALUE * 3000 / 3579545
 
 void timer_init_timer();
 
 unsigned int time_getsystime();
-unsigned long time_getsysticks();
+unsigned long long time_getsysticks();
 
 unsigned long long time_getCMOSTime();
 

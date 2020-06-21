@@ -102,7 +102,7 @@ void disp_backspace()
 	
 	if(lineEnding[row] == 0)
 	{
-		row--;
+		row--;void kprintf(char* format, ...);
 		col = lineEnding[row];
 		
 	}
@@ -230,6 +230,111 @@ void disp_pnum(long x)
 	disp_printc('0' + (x % 10));
 }
 
+unsigned long a;
+unsigned long b;
+unsigned long c;
+unsigned long d;
+unsigned long e;
+unsigned long f;
+unsigned long g;
+unsigned long h;
+
+void kprintf(char* format, ...)
+{	
+	// __asm__("movl %%eax, %0" : "=r" (a));
+	// __asm__("movl %%ebx, %0" : "=r" (b));
+	// __asm__("movl %%ecx, %0" : "=r" (c));
+	// __asm__("movl %%edx, %0" : "=r" (d));
+	// __asm__("movl %%esi, %0" : "=r" (e));
+	// __asm__("movl %%edi, %0" : "=r" (f));
+	// __asm__("movl %%esp, %0" : "=r" (g));
+	// __asm__("movl %%ebp, %0" : "=r" (h));
+
+	// disp_phex32(a);
+	// disp_printc('\n');
+	// disp_phex32(b);
+	// disp_printc('\n');
+	// disp_phex32(c);
+	// disp_printc('\n');
+	// disp_phex32(d);
+	// disp_printc('\n');
+	// disp_phex32(e);
+	// disp_printc('\n');
+	// disp_phex32(f);
+	// disp_printc('\n');
+	// disp_phex32(g);
+	// disp_printc('\n');
+	// disp_phex32(h);
+	// disp_printc('\n');
+
+	// char* stack;
+
+	// char* cur = &format;
+
+	// for(int i = 0; i < (&format - &stack); i++)
+	// {
+	// 	disp_phex8(cur[i]);
+	// 	disp_printc(' ');
+	// }
+
+	int* varStart = (int*)(&format + 1);
+	int cVar = 0;
+
+	while(*format != 0)
+	{
+		if(*format == '\\')
+		{
+			format++;
+			if(*format == 'n')
+			{
+				disp_printc('\n');
+			}
+			else
+			{
+				disp_printc(*format);
+			}
+		}
+		else if(*format == '%')
+		{
+			format++;
+			if(*format == 'i')
+			{
+				disp_pnum(varStart[cVar++]);
+			}
+			else if(*format == 'c')
+			{
+				disp_printc((char)varStart[cVar++]);
+			}
+			else if(*format == 's')
+			{
+				disp_printstring((char*)varStart[cVar++]);
+			}
+			else if(*format == 'x')
+			{
+				if(*(format + 1) == 'b')
+				{
+					disp_phex8(varStart[cVar++]);
+				}
+				else if(*(format + 1) == 's')
+				{
+					disp_phex16(varStart[cVar++]);
+				}
+				else if(*(format + 1) == 'i')
+				{
+					disp_phex32(varStart[cVar++]);
+				}
+				format++;
+			}
+		}
+		else
+		{
+			disp_printc(*format);
+		}
+
+		format++;
+	}
+}
+
 //Clears the location under the cursor
 void disp_clearcursor()
 {
@@ -237,4 +342,47 @@ void disp_clearcursor()
 	unsigned char* vMemLoc = (unsigned char*)(VMEM_LOCATION);
 	vMemLoc[offset] = 0;
 	vMemLoc[offset+1] = 0x0F;
+}
+
+void disp_movecursor(int xDir, int yDir)
+{
+	int offset = disp_getcursor()/2;
+	int rows = offset / (80);
+	int columns = offset % (80);
+
+	if(yDir > 0)
+	{
+		if(yDir > rows)
+		{
+			yDir = rows;
+		}
+
+		int yOffset = rows - yDir;
+		int xOffset = columns;
+
+		if(lineEnding[yOffset] <= xOffset)
+		{
+			xOffset = lineEnding[yOffset];
+		}
+
+		disp_setcursor_rc(xOffset, yOffset);
+
+	}
+	else if(yDir < 0)
+	{
+		if(rows - yDir > 24)
+		{
+			yDir = (rows - 24);
+		}
+
+		int yOffset = rows - yDir;
+		int xOffset = columns;
+
+		if(lineEnding[yOffset] <= xOffset)
+		{
+			xOffset = lineEnding[yOffset];
+		}
+
+		disp_setcursor_rc(xOffset, yOffset);
+	}
 }

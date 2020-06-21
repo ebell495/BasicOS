@@ -32,12 +32,15 @@
 #define ATA_STATUS_BSY_BIT  0b10000000    //Set if the drive is preparing to send/receive data
 
 unsigned int numSectors = 0;
+unsigned int cNumReads = 0;
+unsigned int cNumWrites = 0;
+
+#define ATA_PRINT_SERIAL_DEBUG 0
 
 void ata_initdrive()
 {
 	pbyteout(ATA_PRI_DRIVE_REG, 0xA0);
 	
-	/*
 
 	unsigned char cl = pbytein(ATA_PRI_LBA_MID_REG);
 	unsigned char ch = pbytein(ATA_PRI_LBA_HIGH_REG);
@@ -48,7 +51,7 @@ void ata_initdrive()
 	else if (cl==0x3c && ch==0xc3) disp_printstring("SATA Drive detectedd\n");
 	else disp_printstring("Error, Drive Unknown\n");
 	
-	*/
+	
 
 	pbyteout(ATA_PRI_DRIVE_REG, 0xA0);
 	
@@ -107,6 +110,11 @@ unsigned char* ata_readsector(unsigned int LBA)
 		ret[j*2] = in & 0xFF;
 		ret[j*2 + 1] = (in >> 8) & 0xFF;
 	}
+
+	cNumReads++;
+
+	if(ATA_PRINT_SERIAL_DEBUG)
+		p_serial_printf("Read sector %i\n", LBA);
 	
 	return ret;
 }
@@ -135,6 +143,11 @@ void ata_writesector(unsigned int LBA, unsigned char* data)
 	
 	pbyteout(ATA_PRI_STATUS_COM_REG, ATA_COM_FLUSH);
 	ata_waitfordrive();
+
+	cNumWrites++;
+
+	if(ATA_PRINT_SERIAL_DEBUG)
+		p_serial_printf("Write sector %i\n", LBA);
 }
 
 void ata_waitfordrive()
@@ -263,5 +276,16 @@ unsigned char* ata_readbytes(unsigned int LBA, unsigned int offset, unsigned int
 unsigned int ata_getNumSectors()
 {
 	return numSectors;
+}
+
+
+unsigned int ata_getNumReads()
+{
+	return cNumReads;
+}
+
+unsigned int ata_getNumWrites()
+{
+	return cNumWrites;
 }
 

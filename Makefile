@@ -1,33 +1,57 @@
-build:
-	make clean
-	nasm -f bin "bootloader/boot1.asm" -o "bin/bootloader/boot1.bin"
-	nasm -f bin "bootloader/boot2.asm" -o "bin/bootloader/boot2.bin"
-	nasm "kernel/asm/kernelEntry.asm" -f elf32 -o "bin/kernel/kernelEntry.o"
-	nasm "kernel/asm/IRQHandler.asm" -f elf32 -o "bin/kernel/IRQHandler.o"
-	cat "bin/bootloader/boot1.bin" "bin/bootloader/boot2.bin" > "bin/bootloader/bootloader.bin"
-	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/kernel.c" -o "bin/kernel/kernel.o"
-	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/drv/hwio.c" -o "bin/kernel/hwio.o"
-	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/drv/display.c" -o "bin/kernel/display.o"
-	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/drv/ps2k.c" -o "bin/kernel/ps2k.o"
-	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/util/memlib.c" -o "bin/kernel/memlib.o"
-	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/drv/ata.c" -o "bin/kernel/ata.o"
-	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/util/interrupts.c" -o "bin/kernel/interrupts.o"
-	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/util/interrupt_handler.c" -o "bin/kernel/interrupt_handler.o"
-	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/util/timer.c" -o "bin/kernel/timer.o"
-	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/filesystem/LEAN.c" -o "bin/kernel/LEAN.o"
-	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/util/utils.c" -o "bin/kernel/utils.o"
-	gcc -Wall -fno-pie -static -m32 -ffreestanding -g -c "kernel/lib/filesystem/file.c" -o "bin/kernel/file.o"
-	ld -melf_i386 -o "bin/kernel/kernel.bin" -Ttext 0x1500 "bin/kernel/kernelEntry.o" "bin/kernel/kernel.o"  "bin/kernel/display.o" "bin/kernel/hwio.o" "bin/kernel/ps2k.o" "bin/kernel/memlib.o" "bin/kernel/ata.o" "bin/kernel/IRQHandler.o" "bin/kernel/interrupts.o" "bin/kernel/interrupt_handler.o" "bin/kernel/timer.o" "bin/kernel/LEAN.o" "bin/kernel/utils.o" "bin/kernel/file.o" --oformat binary
-	cat "bin/bootloader/bootloader.bin" "bin/kernel/kernel.bin"> "image/os-image.img"
-	dd if=/dev/zero of=image/os-image.img bs=1 count=1 seek=2097151
+CSOURCES = $(shell find kernel -type f -iname '*.c')
+COBJECTS = $(foreach x, $(basename $(CSOURCES)), $(x).o)
+
+ASOURCES = $(shell find kernel -type f -iname '*.asm')
+AOBJECTS = $(foreach x, $(basename $(ASOURCES)), $(x).o)
+
+BSOURCES = bootloader/boot1.asm bootloader/boot2.asm
+BBINS = $(foreach x, $(basename $(BSOURCES)), $(x).bin)
+
+EXTRAFILES = testImage.bmp
+
+BOOTLOADER = bin/boot.bin
+KERNEL = bin/kernel.bin
+
+TARGET = image/os-image.img
+
+GCC = gcc
+GCCFLAGS = -Wall -fno-pie -fno-stack-protector -static -m32 -ffreestanding -c
+
+NASM = nasm
+BOOTFLAGS = -f bin
+AOBJFLAGS = -f elf32
+
+LD = ld
+LDFLAGS = -Ttext 0x1500 -melf_i386 --oformat binary
+
+OBJS = $(shell find -type f -iname '*.o')
+BINS = $(shell find -type f -iname '*.bin')
+IMG = $(shell find -type f -iname '*.img')
+
+$(TARGET): $(BOOTLOADER) $(KERNEL)
+	#cat $(BOOTLOADER) $(KERNEL) > $(TARGET)
+	#dd if=/dev/zero of=$(TARGET) bs=1 count=1 seek=131071
+	./leanfs -s 3072 -b 3 -v basicos --raw=$(BOOTLOADER),0 --insert=$(KERNEL),$(EXTRAFILES) $(TARGET)
+	rm -f $(OBJS)
+	#rm -f $(BINS)
+
+$(BOOTLOADER): $(BBINS)
+	cat $(BBINS) > $(BOOTLOADER)
+
+$(KERNEL): bootloader/kernelEntry.o $(COBJECTS) $(AOBJECTS)
+	ld $(LDFLAGS) -o $@ bootloader/kernelEntry.o $(AOBJECTS) $(COBJECTS)
+	dd if=/dev/zero of=$(KERNEL) bs=1 count=1 seek=59391
+
+%.bin: %.asm
+	$(NASM) $(BOOTFLAGS) $^ -o $@
+
+%.o: %.c
+	$(GCC) $(GCCFLAGS) $^ -o $@
+
+%.o: %.asm
+	$(NASM) $(AOBJFLAGS) $^ -o $@
 
 clean:
-	rm -r -f bin
-	rm -r -f image
-	mkdir bin
-	mkdir bin/bootloader
-	mkdir bin/kernel
-	mkdir image
-	
-
-	
+	rm -f $(OBJS)
+	rm -f $(BINS)
+	rm -f $(IMG)

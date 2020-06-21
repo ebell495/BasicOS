@@ -49,5 +49,8 @@ unsigned char* ata_readbytes(unsigned int LBA, unsigned int offset, unsigned int
 //void ata_updateinterrupt();
 
 unsigned int ata_getNumSectors();
+unsigned int ata_getNumReads();
+
+unsigned int ata_getNumWrites();
 
 #endif

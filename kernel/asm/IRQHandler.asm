@@ -1,4 +1,3 @@
-;Taken from https://wiki.osdev.org/Interrupts_tutorial
 [bits 32]
 global irq0
 global irq1
@@ -16,25 +15,10 @@ global irq12
 global irq13
 global irq14
 global irq15
+
+global testInt
  
 global load_idt
- 
-global irq0_handler
-global irq1_handler
-global irq2_handler
-global irq3_handler
-global irq4_handler
-global irq5_handler
-global irq6_handler
-global irq7_handler
-global irq8_handler
-global irq9_handler
-global irq10_handler
-global irq11_handler
-global irq12_handler
-global irq13_handler
-global irq14_handler
-global irq15_handler
  
 extern irq0_handler
 extern irq1_handler
@@ -52,29 +36,41 @@ extern irq12_handler
 extern irq13_handler
 extern irq14_handler
 extern irq15_handler
+extern irq_yield_preempt
  
+testInt:
+  pushad
+  call irq_yield_preempt
+  mov al, 0x20
+  out 0xa0, al
+  out 0x20, al
+  popad
+  iret
+
 irq0:
-  pusha
+  cli
+  pushad
   call irq0_handler
-  popa
+  popad
+  sti
   iret
  
 irq1:
-  pusha
+  pushad
   call irq1_handler
-  popa
+  popad
   iret
  
 irq2:
-  pusha
+  pushad
   call irq2_handler
-  popa
+  popad
   iret
  
 irq3:
-  pusha
+  pushad
   call irq3_handler
-  popa
+  popad
   iret
  
 irq4:
@@ -150,7 +146,14 @@ irq15:
   iret
  
 load_idt:
+  cli
 	mov edx, [esp + 4]
 	lidt [edx]
 	sti
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
 	ret

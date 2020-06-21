@@ -1,10 +1,12 @@
 #include "memlib.h"
 #include "memlib_ext.h"
 #include "../drv/display.h"
+#include "../drv/hwio.h"
+#include "bitmap.h"
 
 #define E820_LOC 0x10000
-#define E820_COUNT_LOC 0xFFFD
-#define K_PAGE_SIZE 520
+#define E820_COUNT_LOC 0x1400
+#define K_PAGE_SIZE 40
 
 unsigned int lowMemSize = 0x0;
 unsigned int highMemLocation = 0x0;
@@ -12,6 +14,8 @@ unsigned int highMemSize = 0x0;
 
 unsigned int bucketStartLocation = 0x0;
 unsigned int bitmapStartLocation = 0x0;
+
+k_bitmap memBitmap;
 
 unsigned int memInUse = 0;
 unsigned int memMaxUse = 0;
@@ -52,6 +56,18 @@ void memset(const void* restrict ptr1, unsigned char val, int size)
 	}
 }
 
+void* kmal(unsigned int size, int location)
+{
+	void* ret = kmalloc(size);
+	disp_printstring("Location ");
+	disp_pnum(location);
+	disp_printstring(" is address ");
+	disp_phex32((unsigned int)ret);
+	disp_printc('\n');
+
+	return ret;
+}
+
 //Kernel memory allocation
 
 void* kmalloc(unsigned int size)
@@ -62,9 +78,11 @@ void* kmalloc(unsigned int size)
 
 	start *= K_PAGE_SIZE;
 
+	//p_serial_printf("SIZE %i, PAGES %i\n", size, numOfPage);
 	if(start < 0)
 	{
 		disp_printstring("Error allocating memory, no space available");
+		p_serial_printf("Error allocating memory of size %i\n", size);
 		return 0;
 	}
 	
@@ -74,6 +92,8 @@ void* kmalloc(unsigned int size)
 	{
 		mem_markbitmap(i + (start/K_PAGE_SIZE), 1);
 	}
+
+	memset((ret-8), 0, numOfPage * K_PAGE_SIZE);
 
 	unsigned int* pt_numPage = (unsigned int*)(highMemLocation + start);
 	*pt_numPage = numOfPage;
@@ -93,6 +113,9 @@ void kfree(void* pointer)
 	{
 		mem_markbitmap(bmapLoc + i, 0);
 	}
+	
+	memset((pointer-8), 0, size * K_PAGE_SIZE);
+	
 
 	return;
 }
@@ -122,7 +145,7 @@ int findNumMemLoc(unsigned int num)
 	unsigned int start = 0;
 	unsigned int maxCon = 0;
 
-	for(int i = 0; i < bitmapStartLocation - highMemLocation; i++)
+	for(int i = 0; i < mem_getMemSize(); i++)
 	{
 		if(mem_checkbitmap(i) == 0)
 		{
@@ -146,23 +169,25 @@ int findNumMemLoc(unsigned int num)
 
 void mem_markbitmap(unsigned int loc, unsigned char status)
 {
-	unsigned int byte = 0;
-	unsigned char bit = 0;
+	//unsigned int byte = 0;
+	//unsigned char bit = 0;
 
-	byte = loc / 8;
-	bit = loc % 8;
+	//byte = loc / 8;
+	//bit = loc % 8;
 
-	unsigned char* bMap = (unsigned char*)(bitmapStartLocation + byte);
+	//unsigned char* bMap = (unsigned char*)(bitmapStartLocation + byte);
 
 	if(status == 0)
 	{
-		bMap[0] = bMap[0] ^ (1 << bit);
+		//bMap[0] = bMap[0] ^ (1 << bit);
+		bitmap_clear_bit(memBitmap, loc);
 		memInUse -= K_PAGE_SIZE;
 		memset((void*)(loc*K_PAGE_SIZE+highMemLocation), 0, K_PAGE_SIZE);
 	}
 	else
 	{
-		bMap[0] = bMap[0] | (1 << bit);
+		//bMap[0] = bMap[0] | (1 << bit);
+		bitmap_set_bit(memBitmap, loc);
 		memInUse += K_PAGE_SIZE;
 		if(memInUse > memMaxUse)
 			memMaxUse = memInUse;
@@ -171,15 +196,16 @@ void mem_markbitmap(unsigned int loc, unsigned char status)
 
 unsigned char mem_checkbitmap(unsigned int loc)
 {
-	unsigned int byte = 0;
-	unsigned char bit = 0;
+	//unsigned int byte = 0;
+	//unsigned char bit = 0;
 
-	byte = loc / 8;
-	bit = loc % 8;
+	//byte = loc / 8;
+	//bit = loc % 8;
 
-	unsigned char* bMap = (unsigned char*)(bitmapStartLocation + byte);
+	//unsigned char* bMap = (unsigned char*)(bitmapStartLocation + byte);
 
-	return ((bMap[0] & (1 << bit)) > 0);
+	//return ((bMap[0] & (1 << bit)) > 0);
+	return bitmap_is_bit_set(memBitmap, loc);
 }
 
 //Reads the e820 map that was loaded during the boot sequence
@@ -229,16 +255,9 @@ void mem_read_e820()
 				bitmapStartLocation = (size + baseAddress) - (size / K_PAGE_SIZE / 8);
 				//nextBucketLocation = bucketStartLocation;
 				//nextPageLocation = bucketStartLocation - (sizeof(struct kbucket) * ((size / 4096)));
-				/*
-				disp_phex32(bucketStartLocation);
-				disp_printc('\n');
-				disp_phex32(nextPageLocation);
-				disp_printc('\n');
-				disp_phex32(baseAddress);
-				disp_printc('\n');
-				disp_phex32(size);
-				disp_printc('\n');
-				*/
+				
+				
+				
 			}
 			else
 			{
@@ -246,4 +265,33 @@ void mem_read_e820()
 			}
 		}
 	}
+	
+	/*
+	disp_phex32(bitmapStartLocation);
+	disp_printc('\n');
+	disp_phex32(bucketStartLocation);
+	disp_printc('\n');
+	disp_phex32(highMemSize);
+	disp_printc('\n');
+	disp_phex32(highMemSize+bucketStartLocation);
+	disp_printc('\n');
+	disp_phex32(lowMemSize);
+	disp_printc('\n');
+	*/
+
+	p_serial_printf("Start location %xi, Size %xi, bitmapStartLocation %xi\n", highMemLocation, highMemSize, bitmapStartLocation);
+	memBitmap = (k_bitmap) bitmapStartLocation;
+}
+
+void dumpMemLoc(unsigned int loc, unsigned int amount)
+{
+	for(int i = 0; i < amount; i++)
+	{
+		p_serial_printf("%xi: %xi\n", ((unsigned int*)((unsigned int*)loc + i)), *((unsigned int*)((unsigned int*)loc + i)));
+	}
+}
+
+unsigned int getBitmapStart()
+{
+	return bitmapStartLocation;
 }
