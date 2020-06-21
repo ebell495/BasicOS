@@ -14,6 +14,8 @@ KERNEL = bin/kernel.bin
 
 TARGET = image/os-image.img
 
+TOOLS = fsTool/leanfs
+
 GCC = gcc
 GCCFLAGS = -Wall -fno-pie -fno-stack-protector -static -m32 -ffreestanding -c
 
@@ -28,11 +30,11 @@ OBJS = $(shell find -type f -iname '*.o')
 BINS = $(shell find -type f -iname '*.bin')
 IMG = $(shell find -type f -iname '*.img')
 
-$(TARGET): $(BOOTLOADER) $(KERNEL)
+$(TARGET): $(BOOTLOADER) $(KERNEL) ${TOOLS}
 	#cat $(BOOTLOADER) $(KERNEL) > $(TARGET)
 	#dd if=/dev/zero of=$(TARGET) bs=1 count=1 seek=131071
-	./leanfs -s 3072 -b 3 -v basicos --raw=$(BOOTLOADER),0 --insert=$(KERNEL),$(EXTRAFILES) $(TARGET)
-	rm -f $(OBJS)
+	./fsTool/leanfs -s 3072 -b 3 -v basicos --raw=$(BOOTLOADER),0 --insert=$(KERNEL),$(EXTRAFILES) $(TARGET)
+	#rm -f $(OBJS)
 	#rm -f $(BINS)
 
 $(BOOTLOADER): $(BBINS)
@@ -51,7 +53,11 @@ $(KERNEL): bootloader/kernelEntry.o $(COBJECTS) $(AOBJECTS)
 %.o: %.asm
 	$(NASM) $(AOBJFLAGS) $^ -o $@
 
+fsTool/leanfs: fsTool/Main.cpp fsTool/LEAN.cpp
+	g++ fsTool/Main.cpp fsTool/LEAN.cpp -IfsTool/include -o fsTool/leanfs
+
 clean:
 	rm -f $(OBJS)
 	rm -f $(BINS)
 	rm -f $(IMG)
+	rm -f $(TOOLS)

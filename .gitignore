@@ -4,6 +4,8 @@
 *.bak
 *.bmp
 *.png
+fsTool/leanfs
+bin
 
 basic_os.sublime-project
 *.sublime-workspace
