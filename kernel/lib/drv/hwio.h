@@ -59,5 +59,16 @@ void p_serial_writestring(char* string);
 //Sends multiple bytes of data to the serial port
 void p_serial_writebytes(char* bytes, unsigned int size);
 
+void p_serial_printf(char* format, ...);
+
+//Prints the hex representation of the short passed
+void p_serial_phex16(unsigned short x);
+
+//Prints the hex representation of the integer passed
+void p_serial_phex32(unsigned int x);
+
+//Prints the hex representation of the byte passed
+void p_serial_phex8(unsigned char x);
+
 void p_serial_writenum(long in);
 #endif

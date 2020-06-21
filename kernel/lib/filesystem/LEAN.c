@@ -4,8 +4,10 @@
 #include "../drv/display.h"
 #include "../drv/hwio.h"
 #include "../util/utils.h"
+#include "../util/timer.h"
 
 struct Superblock* currentSb = 0;
+unsigned char* bitmapBuffer = 0;
 
 unsigned int LEAN_computeChecksum(const void* data, unsigned short size)
 {
@@ -35,11 +37,12 @@ unsigned char LEAN_checkBitmap(unsigned long sector)
 	byte = sector / 8;
 	bit = sector % 8;
 
-	unsigned char* bMap = ata_readbytes(currentSb->bitmapStart, byte, 1);
+	//unsigned char* bMap = ata_readbytes(currentSb->bitmapStart, byte, 1);
+	unsigned char bMap = bitmapBuffer[byte];
 
-	unsigned char res = ((bMap[0] & (1 << bit)) > 0);
+	unsigned char res = ((bMap & (1 << bit)) > 0);
 
-	kfree(bMap);
+	//kfree(bMap);
 
 	return res;
 }
@@ -52,16 +55,45 @@ void LEAN_markBitmap(unsigned long sector, unsigned char status)
 	byte = sector / 8;
 	bit = sector % 8;
 
-	unsigned char* bMap = ata_readbytes(currentSb->bitmapStart, byte, 1);
+	//unsigned char* bMap = ata_readbytes(currentSb->bitmapStart, byte, 1);
+	unsigned char bMap = bitmapBuffer[byte];
 
 	if(status == 0)
-		bMap[0] = bMap[0] ^ (0 << bit);
+		bMap = bMap ^ (0 << bit);
 	else
-		bMap[0] = bMap[0] | (1 << bit);
+		bMap = bMap | (1 << bit);
 
-	ata_writebytes(currentSb->bitmapStart, byte, bMap, 1);
+	 bitmapBuffer[byte] = bMap;
 
-	kfree(bMap);
+	 ata_writesector(currentSb->bitmapStart, bitmapBuffer);
+
+	//ata_writebytes(currentSb->bitmapStart, byte, bMap, 1);
+
+	//kfree(bMap);
+}
+
+void LEAN_markBitmapBuffered(unsigned long sector, unsigned char status)
+{
+	unsigned int byte = 0;
+	unsigned char bit = 0;
+
+	byte = sector / 8;
+	bit = sector % 8;
+
+	//unsigned char* bMap = ata_readbytes(currentSb->bitmapStart, byte, 1);
+	unsigned char bMap = bitmapBuffer[byte];
+
+	if(status == 0)
+		bMap = bMap ^ (0 << bit);
+	else
+		bMap = bMap | (1 << bit);
+
+	 bitmapBuffer[byte] = bMap;
+}
+
+void LEAN_flushBitmapBuffer()
+{
+	ata_writesector(currentSb->bitmapStart, bitmapBuffer);
 }
 
 struct Superblock* LEAN_readSuperblock()
@@ -73,10 +105,8 @@ struct Superblock* LEAN_readSuperblock()
 
 	if(pt1->status != 0x80 || pt1-> partitionType != 0xEA)
 	{
-		disp_printstring("Error with partition table: status and partition type were: \n");
-		disp_phex8(pt1->status);
-		disp_printc(' ');
-		disp_phex8(pt1->partitionType);
+		p_serial_printf("Error 1");
+		while(1);
 		return (struct Superblock*) 0;
 	}
 
@@ -84,17 +114,13 @@ struct Superblock* LEAN_readSuperblock()
 
 	unsigned char* sbSector = ata_readsector(sbLBA);
 	struct Superblock* sb = kmalloc(512);
+	currentSb = sb;
 	memcpy(sb, sbSector, 512);
 
 	if(sb->magic != 0x4E41454C || sb->primarySuper != sbLBA)
 	{
-		disp_printstring("Error with superblock, magic or superblock sector did not match, magic, primarySuper and readSector were: \n");
-		disp_phex32(sb->magic);
-		disp_printc(' ');
-		disp_phex32(sb->primarySuper);
-		disp_printc(' ');
-		disp_phex32(sbLBA);
-
+		p_serial_printf("Error 2");
+		while(1);
 		return (struct Superblock*) 0;
 	}
 
@@ -102,14 +128,22 @@ struct Superblock* LEAN_readSuperblock()
 
 	if(sb->checksum != calcChecksum)
 	{
-		disp_printstring("Error with superblock, checksums did not match. Checksum from block and calculated one was: \n");
-		disp_phex32(sb->checksum);
-		disp_printc(' ');
-		disp_phex32(calcChecksum);
+		p_serial_printf("Error 3");
+		while(1);
 		return (struct Superblock*) 0;
 	}
 
-	disp_printstring("Superblock read successfuly");
+	bitmapBuffer = ata_readsector(sb->bitmapStart);
+
+	p_serial_printf("Superblock read successfuly\n\n");
+
+	for(int i = 0; i < (512-360)/4; i++)
+	{
+		p_serial_printf("%xi ", (unsigned int)(*((unsigned int*)sb + i)));
+	}
+
+	p_serial_printf("\n\nSuperblock read successfuly\n\n");
+
 
 	kfree(mbrSector);
 	kfree(sbSector);
@@ -129,7 +163,7 @@ void LEAN_commitSuperblock(struct Superblock* sb)
 
 struct Inode* LEAN_readNode(unsigned long nodeNumber)
 {
-	struct Inode* ret = (struct Inode*)ata_readbytes(nodeNumber, 0, 176);
+	struct Inode* ret = (struct Inode*)ata_readsector(nodeNumber);
 
 	unsigned int checksum = LEAN_computeChecksum(ret, 176);
 
@@ -139,23 +173,31 @@ struct Inode* LEAN_readNode(unsigned long nodeNumber)
 		disp_pnum(nodeNumber);
 	}
 
+	ret->accessTime = time_getCMOSTime();
+
 	return ret;
 }
 
 void LEAN_writeInode(struct Inode* node)
 {
+	node->inlineAttributes[0] = 0x4C;
+	node->inlineAttributes[1] = 0x01;
+	node->modificationTime = time_getCMOSTime();
 	node->checksum = LEAN_computeChecksum(node, 176);
 	unsigned int location = node->extentStarts[0];
 	ata_writesector(location, (unsigned char*) node);
 
-	if(LEAN_checkBitmap(location) == 0)
+	for(int j = 0; j < node->extentCount; j++)
 	{
-		for(int i = 0; i < node->sectorCount; i++)
-			LEAN_markBitmap(location + i, 1);
+		unsigned int location = node->extentStarts[j];
 
-		currentSb->freeSectorCount -= node->sectorCount;
-		LEAN_commitSuperblock(currentSb);
+		for(int i = 0; i < node->extentSizes[j]; i++)
+			LEAN_markBitmapBuffered(location + i, 1);
 	}
+
+	LEAN_flushBitmapBuffer();
+	currentSb->freeSectorCount -= node->sectorCount;
+	LEAN_commitSuperblock(currentSb);
 }
 
 int LEAN_findNumMemLoc(unsigned int num)
@@ -164,6 +206,33 @@ int LEAN_findNumMemLoc(unsigned int num)
 	unsigned int maxCon = 0;
 
 	for(int i = 0; i < currentSb->sectorCount; i++)
+	{
+		if(LEAN_checkBitmap(i) == 0)
+		{
+			maxCon += 1;
+
+			if(maxCon == num)
+			{
+				return start;
+			}
+		}
+		else
+		{
+			maxCon = 0;
+			start = (i+1);
+		}
+
+
+	}
+	return -1;
+}
+
+int LEAN_findNextLocFromLoc(unsigned int num, unsigned int loc)
+{
+	unsigned int start = loc;
+	unsigned int maxCon = 0;
+
+	for(int i = loc; i < currentSb->sectorCount; i++)
 	{
 		if(LEAN_checkBitmap(i) == 0)
 		{
@@ -204,6 +273,7 @@ struct Inode* LEAN_createInode(unsigned int attrib)
 	ret->sectorCount = currentSb->preallocCount + 1;
 	ret->extentStarts[0] = sector;
 	ret->extentSizes[0] = currentSb->preallocCount + 1;
+	ret->creationTime = time_getCMOSTime();
 
 	LEAN_writeInode(ret);
 
@@ -234,7 +304,9 @@ void LEAN_writeIndirect(struct Indirect* indirect)
 	if(LEAN_checkBitmap(location) == 0)
 	{
 		for(int i = 0; i < indirect->sectorCount; i++)
-			LEAN_markBitmap(location + i, 1);
+			LEAN_markBitmapBuffered(location + i, 1);
+
+		LEAN_flushBitmapBuffer();
 
 		currentSb->freeSectorCount -= indirect->sectorCount;
 		LEAN_commitSuperblock(currentSb);
@@ -369,6 +441,8 @@ unsigned int LEAN_findNewPartitionLocation(unsigned char partitionNumber, unsign
 
 struct Superblock* LEAN_createLEANPartition(unsigned char partitionNumber, char* name, unsigned int size)
 {
+	bitmapBuffer = kmalloc(512);
+
 	unsigned int sbLocation = LEAN_findNewPartitionLocation(partitionNumber, size);
 
 	struct Superblock* sb = kmalloc(512);
@@ -407,14 +481,14 @@ struct Superblock* LEAN_createLEANPartition(unsigned char partitionNumber, char*
 
 	if(partitionNumber == 0)
 	{
-		LEAN_markBitmap(0, 1);
-		LEAN_markBitmap(1, 1);
-		LEAN_markBitmap(2, 1);
+		LEAN_markBitmapBuffered(0, 1);
+		LEAN_markBitmapBuffered(1, 1);
+		LEAN_markBitmapBuffered(2, 1);
 	}
 
-	LEAN_markBitmap(sbLocation, 1);
-	LEAN_markBitmap(size - 1, 1);
-	LEAN_markBitmap(sbLocation + 1, 1);
+	LEAN_markBitmapBuffered(sbLocation, 1);
+	LEAN_markBitmapBuffered(size - 1, 1);
+	LEAN_markBitmapBuffered(sbLocation + 1, 1);
 
 	struct Inode* rootNode = kmalloc(176);
 
@@ -502,8 +576,7 @@ unsigned char* LEAN_dirEntryToByteArray(struct DirectoryEntry* directoryEntry)
 
 struct DirectoryEntry* LEAN_readDirectoryEntries(unsigned long long inode)
 {
-	//unsigned int dirEntryLoc = inode+1;
-	//unsigned char* sector = ata_readsector(dirEntryLoc);
+	
 	return 0;
 }
 
@@ -604,11 +677,12 @@ struct DirectoryEntry* LEAN_findEndOfPath(char* path)
 void LEAN_writeDirectoryEntry(unsigned long long inode, struct DirectoryEntry* directoryEntry)
 {
 	unsigned int dirEntryLoc = inode+1;
-	struct Inode* node = LEAN_readNode(inode);
 	struct Inode* ptNode = LEAN_readNode(directoryEntry->inode);
-	ptNode->linkCount += 1;
+	ptNode->linkCount++;
 	LEAN_writeInode(ptNode);
 	kfree(ptNode);
+
+	struct Inode* node = LEAN_readNode(inode);
 	
 	int count = 0;
 
@@ -655,9 +729,6 @@ void LEAN_writeDirectoryEntry(unsigned long long inode, struct DirectoryEntry* d
 
 		return;
 	}
-
-
-	//Here if the directory wasn't writen then we would have to check to see if there is another sector allocated or make another extent
 }
 
 unsigned int LEAN_getNextOpenSector(unsigned long long inode)
@@ -671,6 +742,8 @@ unsigned int LEAN_getNextOpenSector(unsigned long long inode)
 		LEAN_markBitmap(cSector, 1);
 		currentSb->freeSectorCount -= 1;
 
+		LEAN_writeInode(node);
+
 		kfree(node);
 
 		return cSector;
@@ -679,30 +752,99 @@ unsigned int LEAN_getNextOpenSector(unsigned long long inode)
 	if(node->extentCount < 6 && cSector < 4096)
 	{
 		node->extentCount++;
-		while(LEAN_checkBitmap(cSector) && LEAN_checkBitmap(cSector+1) != 0 && cSector < 4096)
-			cSector++;
+		cSector = LEAN_findNextLocFromLoc(currentSb->preallocCount+1, node->extentStarts[0]);
 		node->extentStarts[node->extentCount - 1] = cSector;
-		node->extentSizes[node->extentCount - 1] += 2;
-		LEAN_markBitmap(cSector, 1);
-		LEAN_markBitmap(cSector+1, 1);
+		node->extentSizes[node->extentCount - 1] += currentSb->preallocCount+1;
 
-		currentSb->freeSectorCount -= 2;
+		for(int i = 0; i < currentSb->preallocCount+1; i++)
+			LEAN_markBitmapBuffered(cSector+i, 1);
+
+		LEAN_flushBitmapBuffer();
+
+		currentSb->freeSectorCount -= currentSb->preallocCount+1;
+
+		LEAN_writeInode(node);
 
 		kfree(node);
 
 		return cSector;
 	}
+	else if(node->indirectCount == 0 && cSector < 4096)
+	{
+		node->indirectCount++;
+		cSector = LEAN_findNextLocFromLoc(currentSb->preallocCount+1, node->extentStarts[0]);
+		node->firstIndirect = cSector;
+		node->lastIndirect = cSector;
 
+		struct Indirect* indirect = kmalloc(512);
+		indirect->magic = 0x58444E49;
+		indirect->sectorCount = currentSb->preallocCount+1;
+		indirect->inode = inode;
+		indirect->thisSector = cSector;
+		indirect->prevIndirect = 0;
+		indirect->nextIndirect = 0;
+		indirect->extentCount = 1;
+		indirect->extentStarts[0] = cSector+1;
+		indirect->extentSizes[0] = currentSb->preallocCount;
 
-	// if(node->indirectCount == 0)
-	// {
-	// 	node->indirectCount++;
-	// 	while(LEAN_checkBitmap(cSector) && LEAN_checkBitmap(cSector+1) && LEAN_checkBitmap(cSector+2) != 0 && cSector < 4096)
-	// 		cSector++;
+		LEAN_writeInode(node);
+		LEAN_writeIndirect(indirect);
 
-	// 	struct Indirect Indirect = kmalloc(512);
+		kfree(node);
+		kfree(indirect);
 
-	// }
+		return cSector + 1;
+	}
+	else if(cSector < 4096)
+	{
+		unsigned long long fIndirect = node->lastIndirect;
+		struct Indirect* indirect = LEAN_readIndirect(fIndirect);
+
+		
+		cSector = indirect->extentStarts[indirect->extentCount-1] + indirect->extentSizes[indirect->extentCount-1];
+
+		if(LEAN_checkBitmap(cSector) == 0 && cSector < 4096)
+		{
+			indirect->extentSizes[indirect->extentCount-1] += 1;
+			LEAN_markBitmap(cSector, 1);
+			currentSb->freeSectorCount -= 1;
+
+			LEAN_writeInode(node);
+			LEAN_writeIndirect(indirect);
+
+			kfree(node);
+			kfree(indirect);
+
+			return cSector;
+		}
+
+		if(indirect->extentCount < EXTENTS_PER_INDIRECT)
+		{
+			indirect->extentCount++;
+			cSector = LEAN_findNextLocFromLoc(currentSb->preallocCount+1, indirect->extentStarts[0]);
+			indirect->extentStarts[indirect->extentCount - 1] = cSector;
+			indirect->extentSizes[indirect->extentCount - 1] += currentSb->preallocCount+1;
+
+			for(int i = 0; i < currentSb->preallocCount+1; i++)
+				LEAN_markBitmapBuffered(cSector+i, 1);
+
+			LEAN_flushBitmapBuffer();
+
+			currentSb->freeSectorCount -= currentSb->preallocCount+1;
+
+			LEAN_writeInode(node);
+			LEAN_writeIndirect(indirect);
+
+			kfree(node);
+			kfree(indirect);
+
+			return cSector;
+		}
+		else
+		{
+
+		}
+	}
 
 	kfree(node);
 

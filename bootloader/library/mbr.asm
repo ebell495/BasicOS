@@ -13,7 +13,7 @@ db 0xEA				;Partition Type (EAh is for a LEAN partition)
 
 					;The partition ends at
 db 0x00				;Head 0
-db 0x08				;Sector 8
+db 0x00				;Sector 0
 db 0x04				;Cylinder 4
 
 dd 0x03				;LBA Start

@@ -12,4 +12,6 @@ struct IDT_entry
 
 void idt_init();
 
+void registerISV(unsigned char irqNum, int (*isvFunc)(void));
+
 #endif

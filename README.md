@@ -6,9 +6,14 @@ A very simple operating system written in Assembly and C
 - Multi-stage bootloader
 - e820 Memory Map reading
 - Basic I/O from ps2 port and serial port
+- Serial port printf capability
 - Simple 80x25 Text display interface
+- Simple VGA interface
 - ATA Drive reading/writing
 - Basic kernel memory managment
+- Basic multiprocessing capabilites
+- Basic LEAN filesystem implementation
+
 
 # Building
 Right now, this only builds on unix/linux based environments

@@ -10,17 +10,26 @@ call loadKernel				;Read in and load the kernel to the kernel offset
 
 call do_e820
 
+mov cx, 0x0118
+call vbe_get_mode_info
+
+mov bx, 0x0118
+call vbe_set_mode
+
+mov cx, 0x0118
+call vbe_get_mode_info
+
 call switchToPM
 
 jmp $
 
 loadKernel:
 	mov bx, KERNEL_OFFSET	;Store the kernel data in the memory location at this label
-	mov dh, 116				;Load in 48 Sectors or 24KB of kernel data
+	mov dh, 116				;Load in 116 Sectors or 58KB of kernel data
 							;BIG NOTE: The max size of the big kernel.bin is 116 sectors or 58KB
 							;Will need to start breaking it apart and loading in once we actually enter the kernel
 	mov dl, [BOOT_DRIVE]	;Load from the boot drive that the bios provided earlier and was passed from the first stage
-	mov cl, 0x0A			;Kernel is in the 6th sector (1: 1st stage, 2-5: Second Stage)
+	mov cl, 0x0A			;Kernel is in the 9th sector (1: 1st stage, 2-3: Second Stage, 3)
 	call diskLoad
 	
 	ret
@@ -43,6 +52,7 @@ switchToPM:
 	jmp CODE_SEG:init_pm
 	
 %include "bootloader/library/rstdio.asm"
+%include "bootloader/library/vbemode.asm"
 
 ;Loads in the memory map for the kernel to read and interpret
 do_e820:
@@ -93,7 +103,7 @@ do_e820:
 	jne .e820lp
 	
 .e820f:
-	mov bx, 0xFFFD
+	mov bx, 0x1400
 	mov [bx], bp				;store the entry count at 0xFFFD
 	clc							;there is "jc" on end of list to this point, so the carry must be cleared
 	mov bx, MEM_READ_SUC
@@ -105,6 +115,7 @@ do_e820:
 	mov bx, MEM_DETECT_ERROR
 	call printnl
 	jmp $
+
 
 MEM_DETECT_ERROR: db 'Error Detecting Memory', 0
 MEM_READ_SUC: db 'Detected Memory Sucessfully', 0
@@ -215,4 +226,15 @@ A20_NS db "A20 line is not set", 0
 times 1024-($-$$) db 0
 
 ;Allocate space for the partition information
-times 3072 db 0
+;times 3072 db 0
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;OS Memory Map (In protected mode)
+;00000 - 00FFF     	Real Mode Stack
+;01000 - 01399	   	Second Stage Bootloader
+;01400 - 01401		E820 Count
+;01500 - 0FCFF		kernel  (Note: This overwrites 7C00, where the 1st stage bootloader is loaded to)
+;10000 - 100FF		E820 Data
+;10100 - 10105		VBE PM Instruction Pointers
+;20000 - 201FF		VBE Mode Info Table
+;00000 - 9FBFF		PM Stack

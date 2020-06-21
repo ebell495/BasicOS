@@ -53,4 +53,12 @@ void disp_phex32(unsigned int x);
 
 void disp_pnum(long x);
 
+void kprintf(char* format, ...);
+
+///disp_movecursor
+//Param: xDir-the amount to move the cursor in the horizontal direction, yDir-the amount to move in the vertical direction
+//Moves the cursor some amount in the x direction or in the y direction
+//If there is no character in the provided direction, the cursor will jump to the end of the line
+void disp_movecursor(int xDir, int yDir);
+
 #endif

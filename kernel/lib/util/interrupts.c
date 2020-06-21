@@ -60,7 +60,7 @@ void idt_init()
 	
 	irq0_address = (unsigned long)irq0; 
 	IDT[32].offset_low = irq0_address & 0xffff;
-	IDT[32].selector = 0x08; /* KERNEL_CODE_SEGMENT_OFFSET */
+	IDT[32].selector = 0x08;  //KERNEL_CODE_SEGMENT_OFFSET 
 	IDT[32].zero = 0;
 	IDT[32].type_attrib = 0x8e; /* INTERRUPT_GATE */
 	IDT[32].offset_high = (irq0_address & 0xffff0000) >> 16;
@@ -179,4 +179,30 @@ void idt_init()
 
 	load_idt(idt_ptr);
  
+}
+
+void registerISV(unsigned char irqNum, int (*isvFunc)(void))
+{
+	extern int load_idt();
+	unsigned long idt_address;
+	unsigned long idt_ptr[2];
+
+	//Reserved IRQ
+	if(irqNum < 48)
+	{
+		return;
+	}
+
+	unsigned long isvAddress = (unsigned long)isvFunc; 
+	IDT[irqNum].offset_low = isvAddress & 0xffff;
+	IDT[irqNum].selector = 0x08; /* KERNEL_CODE_SEGMENT_OFFSET */
+	IDT[irqNum].zero = 0;
+	IDT[irqNum].type_attrib = 0x8e; /* INTERRUPT_GATE */
+	IDT[irqNum].offset_high = (isvAddress & 0xffff0000) >> 16;
+
+	idt_address = (unsigned long)IDT ;
+	idt_ptr[0] = (sizeof (struct IDT_entry) * 256) + ((idt_address & 0xffff) << 16);
+	idt_ptr[1] = idt_address >> 16 ;
+ 
+	load_idt(idt_ptr);
 }

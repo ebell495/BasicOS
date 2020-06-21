@@ -1,5 +1,6 @@
 #ifndef _LEANh
 #define _LEANh
+
 //Helper Structs
 #define iaRUSR 				(1 << 8)
 #define iaWUSR 				(1 << 7)
@@ -27,7 +28,7 @@
 #define iaSYS_DIR			iaUSR_ALL + iaFMT_DIRECTORY + iaINLINE_EXT_ATTR + iaPREALLOC + iaNO_ACCESS_TIME + iaSYSTEM
 #define iaSTD_DIR			iaUSR_ALL + iaFMT_DIRECTORY + iaINLINE_EXT_ATTR + iaPREALLOC + iaNO_ACCESS_TIME
 #define iaSYS_FILE			iaUSR_ALL + iaFMT_REGULAR + iaINLINE_EXT_ATTR + iaPREALLOC + iaNO_ACCESS_TIME + iaSYSTEM
-#define isSTD_FILE			iaUSR_ALL + iaFMT_REGULAR + iaINLINE_EXT_ATTR + iaPREALLOC + iaNO_ACCESS_TIME
+#define iaSTD_FILE			iaUSR_ALL + iaFMT_REGULAR + iaINLINE_EXT_ATTR + iaPREALLOC + iaNO_ACCESS_TIME
 
 #define EXTENTS_PER_INODE 6
 #define EXTENTS_PER_INDIRECT 38
@@ -75,6 +76,8 @@ struct Inode
 	unsigned long long fork;
 	unsigned long long extentStarts[EXTENTS_PER_INODE];
 	unsigned int extentSizes[EXTENTS_PER_INODE];
+
+	unsigned char inlineAttributes[336];
 }__attribute__((packed));
 
 struct Indirect
