@@ -2,237 +2,360 @@
 #include "../util/memlib.h"
 #include "../drv/hwio.h"
 
-#define TIME_QUANTUM_TO_SWAP 10
+Queue waiting;
+Queue running;
+Queue kill;
+Process* currentProcess;
+char sched_status = 0;
 
-struct RunQueue runQueue;
-struct QueueNode emptyProcessNode;
-struct Process* currentRunningProcess;
-unsigned char doPreempt = 0;
-unsigned int lastSwapTick = 0;
-
-void defaultLoopProcess()
+unsigned char queue_verifyqueue(Queue* queue)
 {
-	unsigned long long lastTick = 0;
-	while(1)
+	int forwardSize = 0;
+	int backwardSize = 0;
+
+	Queue_node* node = queue->head;
+
+	while(node != 0 && node != queue->tail)
 	{
-		if(lastTick + 2579 < time_getsysticks())
+		forwardSize++;
+		node = node->next;
+	}
+
+	if(node == queue->tail)
+	{
+		forwardSize++;
+		while(node->next != 0)
 		{
-			lastTick = time_getsysticks();
-			p_serial_printf("EMPTY %i\n", lastTick);
-		}
-		else
-		{
-			__asm__("int $80");
+			forwardSize++;
+			node = node->next;
 		}
 	}
+
+	node = queue->tail;
+
+	while(node != 0 && node != queue->head)
+	{
+		backwardSize++;
+		node = node->prev;
+	}
+
+	if(node == queue->head)
+	{
+		backwardSize++;
+		while(node->prev != 0)
+		{
+			backwardSize++;
+			node = node->prev;
+		}
+	}
+
+	return forwardSize - backwardSize;
 }
 
-struct Process* emptyProcess;
-
-void init_sched()
+void queue_enqueue(Queue* queue, Process* data)
 {
-	emptyProcess = createProcess(defaultLoopProcess, "empty");
-	p_serial_printf("EP address: %xi\n", emptyProcess);
-	emptyProcessNode.process = emptyProcess;
-	emptyProcessNode.state = STOPPED_STATE;
-
-	emptyProcessNode.next = 0;
-	emptyProcessNode.prev = 0;
-
-	// runQueue.head = &emptyProcessNode;
-	// runQueue.tail = &emptyProcessNode;
-	// runQueue.size = 1;
-
-	//addToRQ(emptyProcessNode);
-
-	p_serial_printf("EPN address: %xi\n", &emptyProcessNode);
-
-}
-
-void injectProcess(QueueNode* queueNode)
-{
-	int scanCode = 0xDEAD;
-	unsigned int* endPointer = &scanCode;
-	unsigned int tmp = &scanCode;
-	unsigned int offset = 0;
-	unsigned char done = 0;
-
-	__asm__("movl %%ebp, %0" : "=r" (endPointer) : );
-
-	//p_serial_printf("%xi\n", endPointer);
-
-	for(int i = 0; i < 64; i++)
-	{
-		//p_serial_printf("%xi: %xi\n", (unsigned int*)((&scanCode + i)), *(unsigned int*)((&scanCode + i)));
-	}
-
-	//p_serial_printf("\n\n\n");
-
-	while(done < 3)
-	{
-		//p_serial_printf("%xi, %xi, %xi\n", endPointer, *endPointer, tmp);
-		if(*endPointer - tmp > 12*4 && done == 2)
-		{
-			offset = ((unsigned int)endPointer) - ((unsigned int)(&scanCode)) + 8;
-		}
-		else
-		{
-			tmp = endPointer;
-			endPointer = *endPointer;
-		}
-		done++;
-	}
-	//p_serial_printf("\n%xi, %xi, %xi, %xi\n", endPointer, tmp, offset, (unsigned int*)((&scanCode + (offset / 4))));
-	//p_serial_printf("\n\n\n");
-
-	//p_serial_printf("id : %i, Name : %s\n", queueNode->process->id, queueNode->process->procName);
-
-	if(currentRunningProcess != 0)
-	{
-		memcpy(&(currentRunningProcess->savedState.registers), (unsigned int*)((&scanCode + (offset / 4))), 11*4);
-	}
-
-	memcpy((unsigned int*)((&scanCode + (offset / 4))), &(queueNode->process->savedState.registers), 11*4);
-
-	for(int i = 0; i < 64; i++)
-	{
-		//p_serial_printf("%xi: %xi\n", (unsigned int*)((&scanCode + i)), *(unsigned int*)((&scanCode + i)));
-	}
-
-	currentRunningProcess->lastRunTick = time_getsysticks();
-
-	currentRunningProcess = queueNode->process;
-}
-
-QueueNode* removeFromRQ()
-{
-	if(runQueue.tail == 0)
-	{
-		return 0;
-	}
-	else if(runQueue.tail == runQueue.head)
-	{
-		QueueNode* ret = runQueue.tail;
-		runQueue.tail = 0;
-		runQueue.head = 0;
-		runQueue.size = 0;
-		return ret;
-	}
-	else
-	{
-		QueueNode* ret = runQueue.tail;
-		runQueue.tail = runQueue.tail->prev;
-		runQueue.tail->next = 0;
-		runQueue.size--;
-
-		ret->prev = 0;
-		return ret;
-	}
-}
-
-void addToRQ(QueueNode* node)
-{
-	node->next = runQueue.head;
+	Queue_node* node = kmalloc(sizeof(Queue_node));
+	node->data = data;
+	node->next = queue->head;
 	node->prev = 0;
 
-	runQueue.size++;
-
-	if(runQueue.head == 0)
+	if(queue->head == 0)
 	{
-		runQueue.head = node;
-		runQueue.tail = node;
+		queue->tail = node;
+		queue->head = node;
+
+		if(queue_verifyqueue(queue))
+		{
+			p_serial_printf("ERROR: queue_verifyqueue failed in 1) queue_enqueue\n");
+		}
+		return;
+	}
+
+	queue->head->prev = node;
+	queue->head = node;
+
+	if(queue_verifyqueue(queue))
+	{
+		p_serial_printf("ERROR: queue_verifyqueue failed in 2) queue_enqueue\n");
+	}
+}
+
+Process* queue_dequeue(Queue* queue)
+{
+	Queue_node* node = queue->tail;
+
+	if(node == 0)
+		return 0;
+
+	queue->tail = node->prev;
+	if(queue->tail == 0)
+	{
+		queue->head = 0;
 	}
 	else
 	{
-		runQueue.head->prev = node;
-		runQueue.head = node;
+		queue->tail->next = 0;
 	}
-}
 
-QueueNode* cycleRQ()
-{
-	QueueNode* removed = removeFromRQ();
-	if(removed == 0)
-		return 0;
+	Process* ret = node->data;
+	kfree(node);
 
-	addToRQ(removed);
-	return removed;
-}
-
-void enablePreempt()
-{
-	doPreempt = 1;
-}
-
-void disablePreempt()
-{
-	doPreempt = 0;
-}
-
-void doSwapInterrupt()
-{
-	if(doPreempt)
-	{	
-		if(lastSwapTick + TIME_QUANTUM_TO_SWAP > time_getsysticks())
-			return;
-		lastSwapTick = time_getsysticks();
-
-		if(runQueue.tail == 0)
-		{
-			//p_serial_printf("Sched Error: Empty Queue\n");
-			injectProcess(&emptyProcessNode);
-		}
-		else
-		{
-			QueueNode* toRun = cycleRQ();
-			injectProcess(toRun);
-		}
-	}
-}
-
-void queueProcess(struct Process* process)
-{
-	QueueNode* toAdd = kmalloc(sizeof(QueueNode));
-	toAdd->process = process;
-	addToRQ(toAdd);
-}
-
-void dequeueProcess(struct Process* process)
-{
-	QueueNode* ptr = runQueue.head;
-
-	while(ptr != 0)
+	if(queue_verifyqueue(queue))
 	{
-		if(ptr->process == process)
+		p_serial_printf("ERROR: queue_verifyqueue failed in 1) queue_dequeue\n");
+	}
+
+	return ret;
+}
+
+unsigned char queue_remove(Queue* queue, Process* process)
+{
+	Queue_node* node = queue->head;
+
+	while(node != 0)
+	{
+		if(node->data == process)
 		{
-			if(ptr == runQueue.head)
+			if(node == queue->head)
 			{
-				runQueue.head = ptr->next;
-				if(runQueue.head != 0)
+				queue->head = queue->head->next;
+				if(queue->head != 0)
+					queue->head->prev = 0;
+
+				if(node == queue->tail)
 				{
-					runQueue.head->prev = 0;
+					queue->tail = node->prev;
+					if(queue->tail != 0)
+						queue->tail->next = 0;
+
+					
 				}
-				
-				runQueue.size--;
-				kfree(ptr);
-				return;
+
+				if(queue_verifyqueue(queue))
+				{
+					p_serial_printf("ERROR: queue_verifyqueue failed in 1) queue_remove\n");
+				}
+
+				kfree(node);
+				return 1;
 			}
-			else if(ptr == runQueue.tail)
+			else if(node == queue->tail)
 			{
-				kfree(removeFromRQ());
-				return;
+				queue->tail = node->prev;
+				if(queue->tail != 0)
+					queue->tail->next = 0;
+
+				if(queue_verifyqueue(queue))
+				{
+					p_serial_printf("ERROR: queue_verifyqueue failed in 2) queue_remove\n");
+				}	
+
+				kfree(node);
+				return 1;
 			}
 			else
 			{
-				ptr->next->prev = ptr->prev;
-				ptr->prev->next = ptr->next;
+				node->next->prev = node->prev;
+				node->prev->next = node->next;
+				
+				if(queue_verifyqueue(queue))
+				{
+					p_serial_printf("ERROR: queue_verifyqueue failed in 3) queue_remove\n");
+				}
 
-				runQueue.size--;
-				kfree(ptr);
-				return;
+				kfree(node);
+				return 1;
 			}
 		}
-
-		ptr = ptr->next;
+		node = node->next;
 	}
+
+	return 0;
+}
+
+int queue_size(Queue* queue)
+{
+	int size = 0;
+
+	Queue_node* node = queue->head;
+
+	while(node != 0)
+	{
+		node = node->next;
+		size++;
+	}
+
+	return size;
+}
+
+void process_swap(Process* nextProcess, unsigned int* runningContext)
+{
+	//Swap out the old process
+	p_serial_printf("%xi\n", *runningContext);
+	if(currentProcess != 0)
+	{
+		p_serial_printf("DEBUG: Last process ID: %i ", currentProcess->id);
+
+		// for(int i = 0; i < 16; i++)
+		// {
+		// 	p_serial_printf("%i: %xi\n", i, ((unsigned int*)(runningContext))[i]);
+		// }
+
+		memcpy(&(currentProcess->savedState.registers), runningContext, 16*4);
+		p_serial_printf("EIP: %xi\n", currentProcess->savedState.registers.eip);
+
+		// for(int i = 0; i < 16; i++)
+		// {
+		// 	p_serial_printf("%i: %xi\n", i, ((unsigned int*)(&currentProcess->savedState.registers))[i]);
+		// }
+
+		if(currentProcess->savedState.registers.eip <= 0x1500 || currentProcess->savedState.registers.eip >= 0x9500)
+		{
+			p_serial_printf("ERROR: Process %i with corrupt instruction pointer after saving. EIP was: %xi  Reinitializing process\n", currentProcess->id, currentProcess->savedState.registers.eip);
+			currentProcess->savedState.registers.eip = currentProcess->entryPoint;
+			currentProcess->savedState.registers.ebp = (unsigned int) currentProcess->savedState.savedStack - PROCESS_STACK_SIZE;
+			currentProcess->savedState.registers.esp = (unsigned int) currentProcess->savedState.savedStack - PROCESS_STACK_SIZE;
+
+			//Set the default code segment register to 0x08
+			currentProcess->savedState.registers.cs = 0x8;
+			currentProcess->savedState.registers.eflags = 0x293;
+			if(currentProcess->savedState.registers.eip <= 0x1500 || currentProcess->savedState.registers.eip >= 0x9500)
+			{
+				p_serial_printf("ERROR: Process fully corrupt, killing...\n");
+				currentProcess = 0;
+			}
+		}
+	}
+
+	currentProcess = nextProcess;
+
+	if(currentProcess->savedState.registers.esp == currentProcess->savedState.registers.ebp)
+		currentProcess->savedState.registers.esp -= 16*4;
+
+	*runningContext = (currentProcess->savedState.registers.esp);
+	//p_serial_printf("%xi\n", *runningContext);
+	memcpy((unsigned int*)currentProcess->savedState.registers.esp-1, &(currentProcess->savedState.registers), 16*4);
+
+	p_serial_printf("DEBUG: New process ID: %i EIP: %xi\n", currentProcess->id, currentProcess->savedState.registers.eip);
+
+	if(currentProcess->savedState.registers.eip <= 0x1500 || currentProcess->savedState.registers.eip >= 0x9500)
+	{
+		p_serial_printf("ERROR: New process %i with corrupt instruction pointer. EIP was: %xi  Reinitializing process\n", currentProcess->id, currentProcess->savedState.registers.eip);
+		currentProcess->savedState.registers.eip = currentProcess->entryPoint;
+		currentProcess->savedState.registers.ebp = (unsigned int) currentProcess->savedState.savedStack - PROCESS_STACK_SIZE;
+		currentProcess->savedState.registers.esp = (unsigned int) currentProcess->savedState.savedStack - PROCESS_STACK_SIZE;
+		currentProcess->savedState.registers.cs = 0x8;
+		currentProcess->savedState.registers.eflags = 0x293;
+		memcpy((unsigned int*)currentProcess->savedState.registers.esp-1, &(currentProcess->savedState.registers), 16*4);
+		if(currentProcess->savedState.registers.eip <= 0x1500 || currentProcess->savedState.registers.eip >= 0x9500)
+		{
+			p_serial_printf("ERROR: Process fully corrupt, killing...\n");
+			doScheduleEvent(runningContext);	
+		}
+	}
+
+	// for(int i = 0; i < 16; i++)
+	// {
+	// 	p_serial_printf("%i: %xi\n", i, ((unsigned int*)(currentProcess->savedState.registers.esp))[i]);
+	// }
+
+	if(currentProcess != process_getNullProcess() && currentProcess != 0)
+		queue_enqueue(&waiting, currentProcess);
+}
+
+void sched_init()
+{
+	waiting.head = 0;
+	waiting.tail = 0;
+	running.head = 0;
+	running.tail = 0;
+	kill.head = 0;
+	kill.tail = 0;
+	currentProcess = 0;
+	sched_status = 0;
+}
+
+void doScheduleEvent(unsigned int* runningContext)
+{
+	//No new process to run, add in the readyq
+	if(queue_size(&running) == 0)
+	{
+		if(queue_size(&waiting) == 0)
+		{
+			process_swap(process_getNullProcess(), runningContext);
+			return;
+		}
+		else
+		{
+			//Move all processes that are ready to run, to the running queue
+			//If a processes was sleeping, and the time is still not up, then keep in the waiting queue
+			//This is inefficient and instead should anticipate when it will be ready and queue processes that are almost done sleeping
+			//TODO: add sleep functionality
+
+			while(waiting.head != 0)
+			{
+				Process* toAdd = queue_dequeue(&waiting);
+				queue_enqueue(&running, toAdd);
+			}
+		}
+	}
+
+	if(queue_size(&kill) > 0)
+	{
+		while(kill.head != 0)
+		{
+			Process* proc = queue_dequeue(&kill);
+			p_serial_printf("DEBUG: Removing process %i, %s\n", proc->id, proc->procName);
+			if(queue_remove(&running, proc) == 0)
+			{
+				if(queue_remove(&waiting, proc) == 0)
+				{
+					p_serial_printf("ERROR: No such process is running or waiting, Process pointer %xi\n", proc);
+				}
+			}
+
+			if(!queue_verifyqueue(&running))
+			{
+				p_serial_printf("ERROR: Corrupt running queue\n");
+			}
+			if(!queue_verifyqueue(&waiting))
+			{
+				p_serial_printf("ERROR: Corrupt waiting queue\n");
+			}
+		}
+	}
+
+	Process* nextProcess = queue_dequeue(&running);
+
+	process_swap(nextProcess, runningContext);
+}
+
+void addProcess(Process* process)
+{
+	queue_enqueue(&waiting, process);
+}
+
+void removeProcess(Process* process)
+{
+	queue_enqueue(&kill, process);
+}
+
+Process* getCurrentProcess()
+{
+	return currentProcess;
+}
+
+void enableScheduling()
+{
+	sched_status = 1;
+}
+
+void disableScheduling()
+{
+	sched_status = 0;
+}
+
+char getSchedulingStatus()
+{
+	return sched_status;
 }

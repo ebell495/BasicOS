@@ -1,9 +1,5 @@
-#ifndef PROCESS_H
-#define PROCESS_H
-
-#define RUNNING_STATE 1
-#define PAUSED_STATE 2
-#define STOPPED_STATE 0
+#ifndef _processh
+#define _processh
 
 #define PROCESS_STACK_SIZE 4096
 
@@ -12,14 +8,19 @@ struct ContextInfo
 	unsigned char* savedStack;
 	struct Registers
 	{
-		unsigned int edi;
-		unsigned int esi;
-		unsigned int ebp;
 		unsigned int esp;
-		unsigned int ebx;
+		unsigned int ebp;
+		unsigned int esi;
+		unsigned int edi;
 		unsigned int edx;
 		unsigned int ecx;
+		unsigned int ebx;
 		unsigned int eax;
+		unsigned int ds;
+		unsigned int gs;
+		unsigned int fs;
+		unsigned int es;
+		unsigned int ss;
 		unsigned int eip;
 		unsigned int cs;
 		unsigned int eflags;
@@ -38,5 +39,6 @@ typedef struct Process
 
 Process* createProcess(void (*entryFunc)(void), char* name);
 
+Process* process_getNullProcess();
 
 #endif

@@ -3,82 +3,35 @@
 
 //Entry point of the kernel
 
-extern int testInt();
+extern void irq80_yield();
+extern void irq81_enablePreemtion();
+extern void irq82_disablePreemtion();
 struct BitmapImage image;
 
-void interrupt_hand()
+void interrupt_hand1()
 {
-	unsigned long long lastTick = 0;
+	unsigned int vgaBuffer = 0;
 	while(1)
 	{
-		if(lastTick + 100 < time_getsysticks())
+		//p_serial_printf("P2");
+		//disp_printc('2');
+		//p_serial_write('2');
+		vgaBuffer = vga_getCurrentBuffer();
+		vga_draw_bitmap(image.imageBuffer, image.imageWidth, image.imageHeight, 100 + (util_genRand() % 400), 100 + (util_genRand() % 400));
+
+		while(vga_getCurrentBuffer() == vgaBuffer)
 		{
-			lastTick = time_getsysticks();
-			//p_serial_printf("P1 %i\n", lastTick);
-			vga_setpixel_rgb(util_genRand() % 1024, util_genRand() % 768, util_genRand() % 256, util_genRand() % 256, util_genRand() % 256);
+			__asm__("int $80");
 		}
-		else
-		{
-			//Forces the kernel to schedule tasks before the given timeslice is finished
-			
-		}
-		__asm__("int $80");
 	}
 }
 
 void interrupt_hand2()
 {
-	unsigned long long lastTick = 0;
 	while(1)
 	{
-		if(lastTick + 3000 < time_getsysticks())
-		{
-			lastTick = time_getsysticks();
-			p_serial_printf("P3 %i\n", lastTick);
-		}
-		else
-		{
-			
-		}
-		__asm__("int $80");
-	}
-}
-
-void interrupt_hand3()
-{
-	unsigned long long lastTick = 0;
-	//struct BitmapImage image = loadImage("testImage.bmp");
-	while(1)
-	{
-		if(lastTick + 100 < time_getsysticks())
-		{
-			lastTick = time_getsysticks();
-			//p_serial_printf("P4 %i\n", lastTick);
-			vga_draw_bitmap(image.imageBuffer, image.imageWidth, image.imageHeight, 100, 100);
-		}
-		else
-		{
-			
-		}
-		__asm__("int $80");
-	}
-}
-
-void interrupt_hand1()
-{
-	unsigned long long lastTick = 0;
-	while(1)
-	{
-		if(lastTick + 1000 < time_getsysticks())
-		{
-			lastTick = time_getsysticks();
-			p_serial_printf("P2 %i\n", lastTick);
-			//vga_swap_buffers_noclr();
-		}
-		else
-		{
-			
-		}
+		//p_serial_printf("P3");
+		//disp_printc('3');
 		__asm__("int $80");
 	}
 }
@@ -87,27 +40,31 @@ void main()
 {
 	p_initserial();
 	mem_read_e820();
-	init_sched();
-	Process* p1 = createProcess(interrupt_hand, "p1");
-	Process* p2 = createProcess(interrupt_hand1, "p2");
-	Process* p3 = createProcess(interrupt_hand2, "p3");
-	Process* p4 = createProcess(interrupt_hand3, "p4");
+	timer_init_timer();
+	idt_init();
+	vga_initDisplay();
+	__asm__("sti");
+
+	Process* p1 = createProcess(interrupt_hand1, "p1");
+	Process* p2 = createProcess(interrupt_hand2, "p2");
+	// Process* p3 = createProcess(interrupt_hand2, "p3");
+	// Process* p4 = createProcess(interrupt_hand3, "p4");
 	
 	Process* vgaRefresh = createProcess(vga_sync_thread_func, "vgaRefresh");
 	
-	queueProcess(p1);
-	queueProcess(p2);
-	queueProcess(p3);
-	queueProcess(p4);
-	queueProcess(vgaRefresh);
+	// queueProcess(p1);
+	// queueProcess(p2);
+	// queueProcess(p3);
+	// queueProcess(p4);
+	// queueProcess(vgaRefresh);
+
+	addProcess(p1);
+	addProcess(p2);
+	addProcess(vgaRefresh);
 
 	// unsigned int newStackStart = getBitmapStart() - 8;
 	// __asm__("movl %0, %%ebp" : : "r"(newStackStart));
 	// __asm__("movl %ebp, %esp");
-
-	vga_initDisplay();
-	idt_init();
-	timer_init_timer();
 
 	p_serial_writestring("TEST STRING");
 	
@@ -119,26 +76,26 @@ void main()
 
 	image = loadImage("testImage.bmp");
 
-	registerISV(80, testInt);
+	interrupt_register_interrupt(80, irq80_yield);
+	interrupt_register_interrupt(81, irq81_enablePreemtion);
+	interrupt_register_interrupt(82, irq82_disablePreemtion);
 
-	char isRunning = 1;
-	unsigned int count = 0;
-
-	p_serial_printf("Kernel Location: %xi\n", main);
+	p_serial_printf("Kernel Location: %xi\n", time_getsysticks);
 	__asm__("mov $43690, %eax");
 	__asm__("mov $48059, %ebx");
 	__asm__("mov $52428, %ecx");
 	__asm__("mov $56797, %edx");
-	enablePreempt();
+
+	enableScheduling();
 
 	while(1)
 	{
 		//timer_wait(100);
-		p_serial_printf("Kernel Location: %xi\n", main);
-	 	__asm__("mov $43690, %eax");
-		 __asm__("mov $48059, %ebx");
-		 __asm__("mov $52428, %ecx");
-		 __asm__("mov $56797, %edx");
+		// p_serial_printf("Kernel Location: %xi\n", main);
+	 // 	__asm__("mov $43690, %eax");
+		//  __asm__("mov $48059, %ebx");
+		//  __asm__("mov $52428, %ecx");
+		//  __asm__("mov $56797, %edx");
 
 		// //unsigned int startTick = time_getsysticks();
 

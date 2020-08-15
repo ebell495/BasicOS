@@ -12,6 +12,8 @@ struct IDT_entry
 
 void idt_init();
 
-void registerISV(unsigned char irqNum, int (*isvFunc)(void));
+//Loads a function to the specified irq index
+//Indices 0 to 47 are taken, so the number has to be between 48 and 255
+void interrupt_register_interrupt(unsigned char number, void (*interrupt)(void));
 
 #endif

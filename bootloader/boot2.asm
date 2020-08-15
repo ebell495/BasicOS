@@ -1,7 +1,7 @@
 [org 0x1000]			  	;Tell the assembler that we are loaded at the memory location 0x1000
 [bits 16]
 
-KERNEL_OFFSET equ 0x1500
+KERNEL_OFFSET equ 0x2000
 mmap_ent times 4 dw 0
 
 mov [BOOT_DRIVE], dl		;Passed the boot drive to the 

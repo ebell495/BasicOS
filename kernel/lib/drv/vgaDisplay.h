@@ -62,4 +62,6 @@ void vga_draw_char(unsigned char num, unsigned int xPos, unsigned int yPos);
 
 void vga_sync_thread_func();
 
+unsigned int vga_getCurrentBuffer();
+
 #endif

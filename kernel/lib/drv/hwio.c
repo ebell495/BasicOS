@@ -5,6 +5,7 @@
 //Outputs a byte to the port
 void pbyteout(unsigned short port, unsigned char data)
 {
+
 	__asm__("outb %%al, %%dx" : :"a" (data), "d" (port));
 }
 

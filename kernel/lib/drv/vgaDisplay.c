@@ -5,7 +5,7 @@
 
 #define VGA_DISPLAY_VBE_INFO_TABLE_LOC 0x20000
 #define VGA_DISPLAY_BLOCK_SIZE 32
-#define VGA_SYNC_TIME 200
+#define VGA_SYNC_TIME 25
 
 struct vbe_mode_info_structure* vbe_table;
 
@@ -23,6 +23,7 @@ unsigned int pxMapHeight;
 unsigned int pxDispWidth;
 
 unsigned char* vga_font_bitmap;
+unsigned int currentBuffer = 0;
 
 void vga_initDisplay()
 {
@@ -61,6 +62,9 @@ void vga_initDisplay()
 
 void vga_swap_buffers()
 {
+	//Stop preemtion
+	__asm__("int $82");
+
 	unsigned int bitOffset;
 	unsigned int vMemOffset;
 	vga_clear_dirty_screen();
@@ -98,6 +102,9 @@ void vga_swap_buffers()
 	//memset(backbuffer, 0, bufferSize);
 	memcpy(clearDirtyBuffer, dirtyBuffer, bitmapSize);
 	memset(dirtyBuffer, 0, bitmapSize);
+
+	//Reenable preemtion
+	__asm__("int $81");
 }
 
 void vga_swap_buffers_noclr()
@@ -136,7 +143,7 @@ void vga_swap_buffers_noclr()
 	//memset(backbuffer, 0, bufferSize);
 	//memcpy(clearDirtyBuffer, dirtyBuffer, bitmapSize);
 	//memset(dirtyBuffer, 0, bitmapSize);
-	//__asm__("int $80");
+	__asm__("int $80");
 }
 
 void vga_sync_thread_func()
@@ -148,6 +155,7 @@ void vga_sync_thread_func()
 		{
 			lastTick = time_getsysticks();
 			vga_swap_buffers();
+			currentBuffer ^= 1;
 		}
 		else
 		{
@@ -339,4 +347,9 @@ void vga_draw_char(unsigned char num, unsigned int xPos, unsigned int yPos)
 
 		xOffset += (nextRowOffset);
 	}
+}
+
+unsigned int vga_getCurrentBuffer()
+{
+	return currentBuffer;
 }

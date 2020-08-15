@@ -11,6 +11,7 @@ unsigned long long time_getsysticks();
 
 unsigned long long time_getCMOSTime();
 
+//These spinwait for the given amount of time
 void timer_wait(unsigned long ticks);
 void timer_wait_ms(unsigned long ms);
 

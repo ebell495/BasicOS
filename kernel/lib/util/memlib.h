@@ -8,8 +8,6 @@ void* kmalloc(unsigned int size);
 void kfree(void* pointer);
 void dumpMemLoc(unsigned int loc, unsigned int amount);
 
-void* kmal(unsigned int size, int location);
-
 unsigned int mem_getUsedMem();
 unsigned int mem_getFreeMem();
 unsigned int mem_getPeakUse();

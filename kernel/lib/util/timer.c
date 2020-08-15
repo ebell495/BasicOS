@@ -5,9 +5,12 @@ unsigned long long systicks = 0;
 
 void timer_init_timer()
 {
-	pbyteout(0x43, 0b00110110);             
+	pbyteout(0x43, 0b00110110);
+	//The divisor is 0x0255 which is 597 in decimal
+	//This yields about a tick every .5ms             
     pbyteout(0x40, 0x55);   			/* Set low byte of divisor */
     pbyteout(0x40, 0x02);    			 /* Set high byte of divisor */
+
 	systicks = 0;
 	p_serial_writestring("\nTIME INIT\n");
 
@@ -186,7 +189,6 @@ unsigned long long time_getCMOSTime()
 
 void timer_timeinterrupt()
 {
-	//p_serial_writestring("TIME TICK\n");
 	systicks++;
 }
 

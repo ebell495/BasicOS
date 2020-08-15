@@ -16,7 +16,33 @@ global irq13
 global irq14
 global irq15
 
-global testInt
+global exp0
+global exp1
+global exp2
+global exp3
+global exp4
+global exp5
+global exp6
+global exp7
+global exp8
+global exp9
+global exp10
+global exp11
+global exp12
+global exp13
+global exp14
+global exp16
+global exp17
+global exp18
+global exp19
+global exp20
+global exp30
+
+extern exception_handler
+
+global irq80_yield
+global irq81_enablePreemtion
+global irq82_disablePreemtion
  
 global load_idt
  
@@ -36,113 +62,230 @@ extern irq12_handler
 extern irq13_handler
 extern irq14_handler
 extern irq15_handler
-extern irq_yield_preempt
+extern irq_yield_preempt_handler
+extern irq_enablePreemtion_handler
+extern irq_disablePreemtion_handler
  
-testInt:
+irq80_yield:
+
+  cli
+
+  push ss
+  push es
+  push fs
+  push gs
+  push ds
+  push eax
+  push ebx
+  push ecx
+  push edx
+  push edi
+  push esi
+  push ebp
+  push esp
+
+  ;Put the start address of the registers onto the stack
+  ;This will help facilitate a context switch
+  mov edx, esp
+  push edx
+
+  call irq_yield_preempt_handler
+
+  pop edx
+
+  mov esp, edx
+
+
+  pop esp
+  pop ebp
+  pop esi
+  pop edi
+  pop edx
+  pop ecx
+  pop ebx
+  pop eax
+  pop ds
+  pop gs
+  pop fs
+  pop es
+  pop ss
+
+  sti
+  iret
+
+irq81_enablePreemtion:
   pushad
-  call irq_yield_preempt
-  mov al, 0x20
-  out 0xa0, al
-  out 0x20, al
+  call irq_enablePreemtion_handler
+  popad
+  iret
+
+irq82_disablePreemtion:
+  pushad
+  call irq_disablePreemtion_handler
   popad
   iret
 
 irq0:
   cli
-  pushad
+
+  push ss
+  push es
+  push fs
+  push gs
+  push ds
+  push eax
+  push ebx
+  push ecx
+  push edx
+  push edi
+  push esi
+  push ebp
+  push esp
+
+  ;Put the start address of the registers onto the stack
+  ;This will help facilitate a context switch
+  mov edx, esp
+  push edx
+
   call irq0_handler
-  popad
+
+  pop edx
+
+  mov esp, edx
+
+  mov al, 0x20
+  out 0x20, al
+
+  pop esp
+  pop ebp
+  pop esi
+  pop edi
+  pop edx
+  pop ecx
+  pop ebx
+  pop eax
+  pop ds
+  pop gs
+  pop fs
+  pop es
+  pop ss
+
   sti
   iret
- 
+
 irq1:
   pushad
-  call irq1_handler
+
+  mov al, 0x20
+  out 0x20, al 
   popad
   iret
- 
 irq2:
   pushad
-  call irq2_handler
+
+  mov al, 0x20
+  out 0x20, al 
   popad
   iret
- 
 irq3:
   pushad
-  call irq3_handler
+
+  mov al, 0x20
+  out 0x20, al 
   popad
   iret
- 
 irq4:
-  pusha
-  call irq4_handler
-  popa
+  pushad
+
+  mov al, 0x20
+  out 0x20, al 
+  popad
   iret
- 
 irq5:
-  pusha
-  call irq5_handler
-  popa
+  pushad
+
+  mov al, 0x20
+  out 0x20, al 
+  popad
   iret
- 
 irq6:
-  pusha
-  call irq6_handler
-  popa
+  pushad
+
+  mov al, 0x20
+  out 0x20, al 
+  popad
   iret
- 
 irq7:
-  pusha
-  call irq7_handler
-  popa
+  pushad
+
+  mov al, 0x20
+  out 0x20, al 
+  popad
   iret
- 
+
 irq8:
-  pusha
-  call irq8_handler
-  popa
+  pushad
+
+  mov al, 0x20
+  out 0x20, al
+  out 0xa0, al 
+  popad
   iret
- 
 irq9:
-  pusha
-  call irq9_handler
-  popa
+  pushad
+
+  mov al, 0x20
+  out 0x20, al
+  out 0xa0, al 
+  popad
   iret
- 
 irq10:
-  pusha
-  call irq10_handler
-  popa
+  pushad
+
+  mov al, 0x20
+  out 0x20, al
+  out 0xa0, al 
+  popad
   iret
- 
 irq11:
-  pusha
-  call irq11_handler
-  popa
+  pushad
+
+  mov al, 0x20
+  out 0x20, al
+  out 0xa0, al 
+  popad
   iret
- 
 irq12:
-  pusha
-  call irq12_handler
-  popa
+  pushad
+
+  mov al, 0x20
+  out 0x20, al
+  out 0xa0, al 
+  popad
   iret
- 
 irq13:
-  pusha
-  call irq13_handler
-  popa
+  pushad
+
+  mov al, 0x20
+  out 0x20, al
+  out 0xa0, al 
+  popad
   iret
- 
 irq14:
-  pusha
-  call irq14_handler
-  popa
+  pushad
+  mov al, 0x20
+
+  out 0x20, al
+  out 0xa0, al 
+  popad
   iret
- 
 irq15:
-  pusha
-  call irq15_handler
-  popa
+  pushad
+  mov al, 0x20
+
+  out 0x20, al
+  out 0xa0, al 
+  popad
   iret
  
 load_idt:
@@ -157,3 +300,282 @@ load_idt:
   nop
   nop
 	ret
+
+exp0:
+  pushad
+  ;Store the exception number and pass as argument
+  mov eax, 0
+  push eax
+  mov eax, 0
+  push eax
+  call exception_handler
+  pop eax
+  pop eax
+  popad
+  iret
+
+exp1:
+  pushad
+  ;Store the exception number and pass as argument
+  mov eax, 1
+  push eax
+  mov eax, 0
+  push eax
+  call exception_handler
+  pop eax
+  pop eax
+  popad
+  iret
+
+exp2:
+  pushad
+  ;Store the exception number and pass as argument
+  mov eax, 2
+  push eax
+  mov eax, 0
+  push eax
+  call exception_handler
+  pop eax
+  pop eax
+  popad
+  iret
+
+exp3:
+  pushad
+  ;Store the exception number and pass as argument
+  mov eax, 3
+  push eax
+  mov eax, 0
+  push eax
+  call exception_handler
+  pop eax
+  pop eax
+  popad
+  iret
+
+exp4:
+  pushad
+  ;Store the exception number and pass as argument
+  mov eax, 4
+  push eax
+  mov eax, 0
+  push eax
+  call exception_handler
+  pop eax
+  pop eax
+  popad
+  iret
+
+exp5:
+  pushad
+  ;Store the exception number and pass as argument
+  mov eax, 5
+  push eax
+  mov eax, 0
+  push eax
+  call exception_handler
+  pop eax
+  pop eax
+  popad
+  iret
+
+exp6:
+  pushad
+  ;Store the exception number and pass as argument
+  mov eax, 6
+  push eax
+  mov eax, 0
+  push eax
+  call exception_handler
+  pop eax
+  pop eax
+  popad
+  iret
+
+exp7:
+  pushad
+  ;Store the exception number and pass as argument
+  mov eax, 7
+  push eax
+  mov eax, 0
+  push eax
+  call exception_handler
+  pop eax
+  pop eax
+  popad
+  iret
+
+exp8:
+  pushad
+  ;Store the exception number and pass as argument
+  mov eax, 8
+  push eax
+  mov eax, [esp + 12]
+  push eax
+  call exception_handler
+  pop eax
+  pop eax
+  popad
+  add esp, 4
+  iret
+
+exp9:
+  pushad
+  ;Store the exception number and pass as argument
+  mov eax, 9
+  push eax
+  mov eax, 0
+  push eax
+  call exception_handler
+  pop eax
+  pop eax
+  popad
+  iret
+
+exp10:
+  pushad
+  ;Store the exception number and pass as argument
+  mov eax, 10
+  push eax
+  mov eax, [esp + 12]
+  push eax
+  call exception_handler
+  pop eax
+  pop eax
+  popad
+  add esp, 4
+  iret
+
+exp11:
+  pushad
+  ;Store the exception number and pass as argument
+  mov eax, 11
+  push eax
+  mov eax, [esp + 12]
+  push eax
+  call exception_handler
+  pop eax
+  pop eax
+  popad
+  add esp, 4
+  iret
+exp12:
+  pushad
+  ;Store the exception number and pass as argument
+  mov eax, 12
+  push eax
+  mov eax, [esp + 12]
+  push eax
+  call exception_handler
+  pop eax
+  pop eax
+  popad
+  add esp, 4
+  iret
+
+exp13:
+  pushad
+  ;Store the exception number and pass as argument
+  mov eax, 13
+  push eax
+  mov eax, [esp + 12]
+  push eax
+  call exception_handler
+  pop eax
+  pop eax
+  popad
+  add esp, 4
+  iret
+
+exp14:
+  pushad
+  ;Store the exception number and pass as argument
+  mov eax, 14
+  push eax
+  mov eax, [esp + 12]
+  push eax
+  call exception_handler
+  pop eax
+  pop eax
+  popad
+  add esp, 4
+  iret
+
+exp16:
+  pushad
+  ;Store the exception number and pass as argument
+  mov eax, 16
+  push eax
+  mov eax, 0
+  push eax
+  call exception_handler
+  pop eax
+  pop eax
+  popad
+  iret
+
+exp17:
+  pushad
+  ;Store the exception number and pass as argument
+  mov eax, 17
+  push eax
+  mov eax, [esp + 12]
+  push eax
+  call exception_handler
+  pop eax
+  pop eax
+  popad
+  add esp, 4
+  iret
+
+exp18:
+  pushad
+  ;Store the exception number and pass as argument
+  mov eax, 18
+  push eax
+  mov eax, 0
+  push eax
+  call exception_handler
+  pop eax
+  pop eax
+  popad
+  iret
+
+exp19:
+  pushad
+  ;Store the exception number and pass as argument
+  mov eax, 19
+  push eax
+  mov eax, 0
+  push eax
+  call exception_handler
+  pop eax
+  pop eax
+  popad
+  iret
+
+exp20:
+  pushad
+  ;Store the exception number and pass as argument
+  mov eax, 20
+  push eax
+  mov eax, 0
+  push eax
+  call exception_handler
+  pop eax
+  pop eax
+  popad
+  iret
+
+exp30:
+  pushad
+  ;Store the exception number and pass as argument
+  mov eax, 30
+  push eax
+  mov eax, 0
+  push eax
+  call exception_handler
+  pop eax
+  pop eax
+  popad
+  iret

@@ -4,205 +4,121 @@
 
 struct IDT_entry IDT[256];
 
-
 //Taken from https://wiki.osdev.org/Interrupts_tutorial
 void idt_init()
 {
-	//disp_phex32(sizeof (struct IDT_entry));
-	extern int load_idt();
-	extern int irq0();
-	extern int irq1();
-	extern int irq2();
-	extern int irq3();
-	extern int irq4();
-	extern int irq5();
-	extern int irq6();
-	extern int irq7();
-	extern int irq8();
-	extern int irq9();
-	extern int irq10();
-	extern int irq11();
-	extern int irq12();
-	extern int irq13();
-	extern int irq14();
-	extern int irq15();
- 
-	unsigned long irq0_address;
-	unsigned long irq1_address;
-	unsigned long irq2_address;
-	unsigned long irq3_address;          
-	unsigned long irq4_address; 
-	unsigned long irq5_address;
-	unsigned long irq6_address;
-	unsigned long irq7_address;
-	unsigned long irq8_address;
-	unsigned long irq9_address;          
-	unsigned long irq10_address;
-	unsigned long irq11_address;
-	unsigned long irq12_address;
-	unsigned long irq13_address;
-	unsigned long irq14_address;          
-	unsigned long irq15_address;         
-	unsigned long idt_address;
-	unsigned long idt_ptr[2];
+	extern void irq0();
+	extern void irq1();
+	extern void irq2();
+	extern void irq3();
+	extern void irq4();
+	extern void irq5();
+	extern void irq6();
+	extern void irq7();
+	extern void irq8();
+	extern void irq9();
+	extern void irq10();
+	extern void irq11();
+	extern void irq12();
+	extern void irq13();
+	extern void irq14();
+	extern void irq15();
+
+	extern void exp0();
+	extern void exp1();
+	extern void exp2();
+	extern void exp3();
+	extern void exp4();
+	extern void exp5();
+	extern void exp6();
+	extern void exp7();
+	extern void exp8();
+	extern void exp9();
+	extern void exp10();
+	extern void exp11();
+	extern void exp12();
+	extern void exp13();
+	extern void exp14();
+	extern void exp16();
+	extern void exp17();
+	extern void exp18();
+	extern void exp19();
+	extern void exp20();
+	extern void exp30();
 	
 	//Prepare the PIC to be remapped
+	//Init command to both PICs
 	pbyteout(0x20, 0x11);
 	pbyteout(0xA0, 0x11);
+
+	//PIC1 gets offset 0x20 (32)
 	pbyteout(0x21, 0x20);
+	//PIC2 gets offset 0x28 (40)
 	pbyteout(0xA1, 0x28);
+	//Tell PIC1 that there is another PIC at IRQ2 (0x04 = 0000 0100)
 	pbyteout(0x21, 0x04);
 	pbyteout(0xA1, 0x02);
 	pbyteout(0x21, 0x01);
 	pbyteout(0xA1, 0x01);
 	pbyteout(0x21, 0x0);
 	pbyteout(0xA1, 0x0);
-	
-	irq0_address = (unsigned long)irq0; 
-	IDT[32].offset_low = irq0_address & 0xffff;
-	IDT[32].selector = 0x08;  //KERNEL_CODE_SEGMENT_OFFSET 
-	IDT[32].zero = 0;
-	IDT[32].type_attrib = 0x8e; /* INTERRUPT_GATE */
-	IDT[32].offset_high = (irq0_address & 0xffff0000) >> 16;
- 
-	irq1_address = (unsigned long)irq1; 
-	IDT[33].offset_low = irq1_address & 0xffff;
-	IDT[33].selector = 0x08; /* KERNEL_CODE_SEGMENT_OFFSET */
-	IDT[33].zero = 0;
-	IDT[33].type_attrib = 0x8e; /* INTERRUPT_GATE */
-	IDT[33].offset_high = (irq1_address & 0xffff0000) >> 16;
- 
-	irq2_address = (unsigned long)irq2; 
-	IDT[34].offset_low = irq2_address & 0xffff;
-	IDT[34].selector = 0x08; /* KERNEL_CODE_SEGMENT_OFFSET */
-	IDT[34].zero = 0;
-	IDT[34].type_attrib = 0x8e; /* INTERRUPT_GATE */
-	IDT[34].offset_high = (irq2_address & 0xffff0000) >> 16;
- 
-	irq3_address = (unsigned long)irq3; 
-	IDT[35].offset_low = irq3_address & 0xffff;
-	IDT[35].selector = 0x08; /* KERNEL_CODE_SEGMENT_OFFSET */
-	IDT[35].zero = 0;
-	IDT[35].type_attrib = 0x8e; /* INTERRUPT_GATE */
-	IDT[35].offset_high = (irq3_address & 0xffff0000) >> 16;
- 
-	irq4_address = (unsigned long)irq4; 
-	IDT[36].offset_low = irq4_address & 0xffff;
-	IDT[36].selector = 0x08; /* KERNEL_CODE_SEGMENT_OFFSET */
-	IDT[36].zero = 0;
-	IDT[36].type_attrib = 0x8e; /* INTERRUPT_GATE */
-	IDT[36].offset_high = (irq4_address & 0xffff0000) >> 16;
- 
-	irq5_address = (unsigned long)irq5; 
-	IDT[37].offset_low = irq5_address & 0xffff;
-	IDT[37].selector = 0x08; /* KERNEL_CODE_SEGMENT_OFFSET */
-	IDT[37].zero = 0;
-	IDT[37].type_attrib = 0x8e; /* INTERRUPT_GATE */
-	IDT[37].offset_high = (irq5_address & 0xffff0000) >> 16;
- 
-	irq6_address = (unsigned long)irq6; 
-	IDT[38].offset_low = irq6_address & 0xffff;
-	IDT[38].selector = 0x08; /* KERNEL_CODE_SEGMENT_OFFSET */
-	IDT[38].zero = 0;
-	IDT[38].type_attrib = 0x8e; /* INTERRUPT_GATE */
-	IDT[38].offset_high = (irq6_address & 0xffff0000) >> 16;
- 
-	irq7_address = (unsigned long)irq7; 
-	IDT[39].offset_low = irq7_address & 0xffff;
-	IDT[39].selector = 0x08; /* KERNEL_CODE_SEGMENT_OFFSET */
-	IDT[39].zero = 0;
-	IDT[39].type_attrib = 0x8e; /* INTERRUPT_GATE */
-	IDT[39].offset_high = (irq7_address & 0xffff0000) >> 16;
- 
-	irq8_address = (unsigned long)irq8; 
-	IDT[40].offset_low = irq8_address & 0xffff;
-	IDT[40].selector = 0x08; /* KERNEL_CODE_SEGMENT_OFFSET */
-	IDT[40].zero = 0;
-	IDT[40].type_attrib = 0x8e; /* INTERRUPT_GATE */
-	IDT[40].offset_high = (irq8_address & 0xffff0000) >> 16;
- 
-	irq9_address = (unsigned long)irq9; 
-	IDT[41].offset_low = irq9_address & 0xffff;
-	IDT[41].selector = 0x08; /* KERNEL_CODE_SEGMENT_OFFSET */
-	IDT[41].zero = 0;
-	IDT[41].type_attrib = 0x8e; /* INTERRUPT_GATE */
-	IDT[41].offset_high = (irq9_address & 0xffff0000) >> 16;
- 
-	irq10_address = (unsigned long)irq10; 
-	IDT[42].offset_low = irq10_address & 0xffff;
-	IDT[42].selector = 0x08; /* KERNEL_CODE_SEGMENT_OFFSET */
-	IDT[42].zero = 0;
-	IDT[42].type_attrib = 0x8e; /* INTERRUPT_GATE */
-	IDT[42].offset_high = (irq10_address & 0xffff0000) >> 16;
- 
-	irq11_address = (unsigned long)irq11; 
-	IDT[43].offset_low = irq11_address & 0xffff;
-	IDT[43].selector = 0x08; /* KERNEL_CODE_SEGMENT_OFFSET */
-	IDT[43].zero = 0;
-	IDT[43].type_attrib = 0x8e; /* INTERRUPT_GATE */
-	IDT[43].offset_high = (irq11_address & 0xffff0000) >> 16;
- 
-	irq12_address = (unsigned long)irq12; 
-	IDT[44].offset_low = irq12_address & 0xffff;
-	IDT[44].selector = 0x08; /* KERNEL_CODE_SEGMENT_OFFSET */
-	IDT[44].zero = 0;
-	IDT[44].type_attrib = 0x8e; /* INTERRUPT_GATE */
-	IDT[44].offset_high = (irq12_address & 0xffff0000) >> 16;
- 
-	irq13_address = (unsigned long)irq13; 
-	IDT[45].offset_low = irq13_address & 0xffff;
-	IDT[45].selector = 0x08; /* KERNEL_CODE_SEGMENT_OFFSET */
-	IDT[45].zero = 0;
-	IDT[45].type_attrib = 0x8e; /* INTERRUPT_GATE */
-	IDT[45].offset_high = (irq13_address & 0xffff0000) >> 16;
- 
-	irq14_address = (unsigned long)irq14; 
-	IDT[46].offset_low = irq14_address & 0xffff;
-	IDT[46].selector = 0x08; /* KERNEL_CODE_SEGMENT_OFFSET */
-	IDT[46].zero = 0;
-	IDT[46].type_attrib = 0x8e; /* INTERRUPT_GATE */
-	IDT[46].offset_high = (irq14_address & 0xffff0000) >> 16;
- 
-    irq15_address = (unsigned long)irq15; 
-	IDT[47].offset_low = irq15_address & 0xffff;
-	IDT[47].selector = 0x08; /* KERNEL_CODE_SEGMENT_OFFSET */
-	IDT[47].zero = 0;
-	IDT[47].type_attrib = 0x8e; /* INTERRUPT_GATE */
-	IDT[47].offset_high = (irq15_address & 0xffff0000) >> 16;
- 
-	/* fill the IDT descriptor */
-	idt_address = (unsigned long)IDT ;
-	idt_ptr[0] = (sizeof (struct IDT_entry) * 256) + ((idt_address & 0xffff) << 16);
-	idt_ptr[1] = idt_address >> 16 ;
- 
- 
 
-	load_idt(idt_ptr);
+	interrupt_register_interrupt(0, exp0);
+	interrupt_register_interrupt(1, exp1);
+	interrupt_register_interrupt(2, exp2);
+	interrupt_register_interrupt(3, exp3);
+	interrupt_register_interrupt(4, exp4);
+	interrupt_register_interrupt(5, exp5);
+	interrupt_register_interrupt(6, exp6);
+	interrupt_register_interrupt(7, exp7);
+	interrupt_register_interrupt(8, exp8);
+	interrupt_register_interrupt(9, exp9);
+	interrupt_register_interrupt(10, exp10);
+	interrupt_register_interrupt(11, exp11);
+	interrupt_register_interrupt(12, exp12);
+	interrupt_register_interrupt(13, exp13);
+	interrupt_register_interrupt(14, exp14);
+	interrupt_register_interrupt(16, exp16);
+	interrupt_register_interrupt(17, exp17);
+	interrupt_register_interrupt(18, exp18);
+	interrupt_register_interrupt(19, exp19);
+	interrupt_register_interrupt(20, exp20);
+	interrupt_register_interrupt(30, exp30);
+
+	interrupt_register_interrupt(32, irq0);
+	interrupt_register_interrupt(33, irq1);
+	interrupt_register_interrupt(34, irq2);
+	interrupt_register_interrupt(35, irq3);
+	interrupt_register_interrupt(36, irq4);
+	interrupt_register_interrupt(37, irq5);
+	interrupt_register_interrupt(38, irq6);
+	interrupt_register_interrupt(39, irq7);
+	interrupt_register_interrupt(40, irq8);
+	interrupt_register_interrupt(41, irq9);
+	interrupt_register_interrupt(42, irq10);
+	interrupt_register_interrupt(43, irq11);
+	interrupt_register_interrupt(44, irq12);
+	interrupt_register_interrupt(45, irq13);
+	interrupt_register_interrupt(46, irq14);
+	interrupt_register_interrupt(47, irq15);
  
 }
 
-void registerISV(unsigned char irqNum, int (*isvFunc)(void))
+void interrupt_register_interrupt(unsigned char number, void (*interrupt)(void))
 {
-	extern int load_idt();
+	extern void load_idt();
 	unsigned long idt_address;
 	unsigned long idt_ptr[2];
-
-	//Reserved IRQ
-	if(irqNum < 48)
-	{
-		return;
-	}
-
-	unsigned long isvAddress = (unsigned long)isvFunc; 
-	IDT[irqNum].offset_low = isvAddress & 0xffff;
-	IDT[irqNum].selector = 0x08; /* KERNEL_CODE_SEGMENT_OFFSET */
-	IDT[irqNum].zero = 0;
-	IDT[irqNum].type_attrib = 0x8e; /* INTERRUPT_GATE */
-	IDT[irqNum].offset_high = (isvAddress & 0xffff0000) >> 16;
-
 	idt_address = (unsigned long)IDT ;
 	idt_ptr[0] = (sizeof (struct IDT_entry) * 256) + ((idt_address & 0xffff) << 16);
 	idt_ptr[1] = idt_address >> 16 ;
- 
+
+	unsigned long isvAddress = (unsigned long)interrupt; 
+	IDT[number].offset_low = isvAddress & 0xffff;
+	IDT[number].selector = 0x08; /* KERNEL_CODE_SEGMENT_OFFSET */
+	IDT[number].zero = 0;
+	IDT[number].type_attrib = 0x8e; /* INTERRUPT_GATE */
+	IDT[number].offset_high = (isvAddress & 0xffff0000) >> 16;
+
 	load_idt(idt_ptr);
 }

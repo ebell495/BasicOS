@@ -56,20 +56,7 @@ void memset(const void* restrict ptr1, unsigned char val, int size)
 	}
 }
 
-void* kmal(unsigned int size, int location)
-{
-	void* ret = kmalloc(size);
-	disp_printstring("Location ");
-	disp_pnum(location);
-	disp_printstring(" is address ");
-	disp_phex32((unsigned int)ret);
-	disp_printc('\n');
-
-	return ret;
-}
-
 //Kernel memory allocation
-
 void* kmalloc(unsigned int size)
 {
 	unsigned int numOfPage = (size+8) / K_PAGE_SIZE + ((size+8) % K_PAGE_SIZE != 0);

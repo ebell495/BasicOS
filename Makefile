@@ -24,7 +24,7 @@ BOOTFLAGS = -f bin
 AOBJFLAGS = -f elf32
 
 LD = ld
-LDFLAGS = -Ttext 0x1500 -melf_i386 --oformat binary
+LDFLAGS = -T linker.ld -melf_i386 --oformat binary
 
 OBJS = $(shell find -type f -iname '*.o')
 BINS = $(shell find -type f -iname '*.bin')
